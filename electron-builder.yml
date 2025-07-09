@@ -30,7 +30,7 @@ nsis:
 npmRebuild: false
 publish:
   provider: github
-  owner: hoangvu12
+  owner: nerowah
   repo: chommicha
   releaseType: release
 electronDownload:

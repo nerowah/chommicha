@@ -96,7 +96,7 @@ export class UpdaterService {
         return null
       }
 
-      const owner = 'hoangvu12'
+      const owner = 'nerowah'
       const repo = 'chommicha'
       const version = this.updateInfo.version
 
