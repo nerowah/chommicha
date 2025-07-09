@@ -95,7 +95,7 @@ export function TitleBar({ appVersion }: TitleBarProps) {
             variant="ghost"
             size="icon"
             className="w-8 h-8 rounded"
-            onClick={() => handleOpenExternal('pronhub.com/chommicha')}
+            onClick={() => handleOpenExternal('https://www.pronhub.com/chommicha')}
             aria-label={t('social.viewGithub')}
             title={t('social.viewGithub')}
           >
