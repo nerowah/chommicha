@@ -1,0 +1,37 @@
+appId: com.chommicha.app
+productName: Chommicha
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - resources/**
+win:
+  executableName: Chommicha
+  target:
+    - nsis
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: Chommicha-${version}-setup.${ext}
+  shortcutName: Chommicha
+  uninstallDisplayName: Chommicha - League of Legends Skin Changer
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+  perMachine: false
+  allowElevation: true
+npmRebuild: false
+publish:
+  provider: github
+  owner: hoangvu12
+  repo: chommicha
+  releaseType: release
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/

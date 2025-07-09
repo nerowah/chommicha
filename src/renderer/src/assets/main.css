@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Theme transition animation */
+  * {
+    @apply transition-colors duration-200;
+  }
+
+  :root {
+    @apply bg-background text-text-primary;
+  }
+
+  :root.dark {
+    @apply bg-background text-text-primary;
+  }
+
+  body {
+    @apply m-0 p-0 overflow-hidden transition-colors duration-200;
+    font-family:
+      'Figtree',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+  }
+
+  #root {
+    @apply block w-full h-screen;
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-charcoal-50 dark:bg-charcoal-900 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-charcoal-300 dark:bg-charcoal-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-charcoal-400 dark:bg-charcoal-600;
+  }
+
+  /* Light theme specific scrollbar for better visibility */
+  .light-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d1d1 #f5f5f5;
+  }
+
+  .light-scrollbar::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .light-scrollbar::-webkit-scrollbar-track {
+    @apply bg-charcoal-50 rounded-full;
+  }
+
+  .light-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-charcoal-300 rounded-full;
+  }
+
+  .light-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-charcoal-400;
+  }
+
+  /* Card animations */
+  @keyframes cardAppear {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .card-appear {
+    animation: cardAppear 0.4s ease-out forwards;
+  }
+
+  /* Stagger animation for grid items */
+  .grid > div {
+    animation: cardAppear 0.4s ease-out forwards;
+    opacity: 0;
+  }
+
+  .grid > div:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .grid > div:nth-child(2) {
+    animation-delay: 50ms;
+  }
+  .grid > div:nth-child(3) {
+    animation-delay: 100ms;
+  }
+  .grid > div:nth-child(4) {
+    animation-delay: 150ms;
+  }
+  .grid > div:nth-child(5) {
+    animation-delay: 200ms;
+  }
+  .grid > div:nth-child(6) {
+    animation-delay: 250ms;
+  }
+  .grid > div:nth-child(7) {
+    animation-delay: 300ms;
+  }
+  .grid > div:nth-child(8) {
+    animation-delay: 350ms;
+  }
+  .grid > div:nth-child(9) {
+    animation-delay: 400ms;
+  }
+  .grid > div:nth-child(10) {
+    animation-delay: 450ms;
+  }
+
+  /* Slide up animation for drawer */
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+  }
+}
