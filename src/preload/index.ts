@@ -52,9 +52,6 @@ const api = {
     ipcRenderer.invoke('is-favorite', championKey, skinId),
   getFavorites: () => ipcRenderer.invoke('get-favorites'),
 
-getFavoritesByChampion: (championKey: string) =>
-    ipcRenderer.invoke('get-favorites-by-champion', championKey),
-
   // Tools management
   checkToolsExist: () => ipcRenderer.invoke('check-tools-exist'),
   downloadTools: () => ipcRenderer.invoke('download-tools'),
@@ -65,7 +62,6 @@ getFavoritesByChampion: (championKey: string) =>
     return () => ipcRenderer.removeListener('tools-download-progress', handler)
   },
 
-  
   // Window controls
   minimizeWindow: () => ipcRenderer.send('window-minimize'),
   maximizeWindow: () => ipcRenderer.send('window-maximize'),

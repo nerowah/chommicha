@@ -597,16 +597,6 @@ function setupIpcHandlers(): void {
     }
   })
 
-
-  ipcMain.handle('get-favorites-by-champion', async (_, championKey: string) => {
-    try {
-      const favorites = favoritesService.getFavoritesByChampion(championKey)
-      return { success: true, favorites }
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
-    }
-  })
-  
   ipcMain.handle('get-tools-info', async () => {
     try {
       const info = await toolsDownloader.getLatestReleaseInfo()
