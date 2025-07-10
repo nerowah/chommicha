@@ -80,7 +80,8 @@
     "deletedCustomMod": "Удален пользовательский мод: {{name}}",
     "deletedSkin": "Удален скин: {{name}}",
     "failedToDeleteMod": "Не удалось удалить мод: {{error}}",
-    "failedToDeleteSkin": "Не удалось удалить скин: {{error}}"
+    "failedToDeleteSkin": "Не удалось удалить скин: {{error}}",
+    "autoSelectedSkinsCleanedUp": "Очищено {{count}} автоматически выбранных скинов"
   },
   "tools": {
     "required": "Требуются инструменты CS:LOL",
@@ -120,6 +121,10 @@
     "autoRandomRaritySkin": {
       "title": "Авто случайный скин с редкостью",
       "description": "Автоматически выбирать случайный скин с редкостью (Эпический, Легендарный и т.д.) при обнаружении чемпиона"
+    },
+    "autoRandomFavoriteSkin": {
+      "title": "Авто случайный избранный скин",
+      "description": "Автоматически выбирать случайный скин из избранного при обнаружении чемпиона"
     }
   },
   "errors": {
@@ -161,7 +166,7 @@
   "error": "Ошибка",
   "update": {
     "available": "Доступно обновление",
-    "description": "Новая версия Chommicha доступна для скачивания.",
+    "description": "Новая версия chommicha доступна для скачивания.",
     "whatsNew": "Что нового",
     "downloading": "Скачивание...",
     "updateNow": "Обновить сейчас",
@@ -194,7 +199,8 @@
     "manage": "Управление",
     "manageDownloaded": "Управление скачанными скинами",
     "downloadedCount": "Скачанные скины ({{count}})",
-    "allSkins": "Все скины"
+    "allSkins": "Все скины",
+    "autoSelected": "Авто"
   },
   "filters": {
     "title": "Фильтры и сортировка",
@@ -269,8 +275,7 @@
   },
   "social": {
     "joinDiscord": "Присоединиться к Discord",
-    "viewGithub": "Посмотреть на GitHub",
-    "donate": "Поддержать"
+    "viewGithub": "Посмотреть на GitHub"
   },
   "lcu": {
     "connected": "Подключено к клиенту League",

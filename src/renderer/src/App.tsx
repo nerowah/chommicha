@@ -36,6 +36,7 @@ import { useToolsManagement } from './hooks/useToolsManagement'
 import { useAppInitialization } from './hooks/useAppInitialization'
 import { useChampionSelectHandler } from './hooks/useChampionSelectHandler'
 import { useP2PSkinSync } from './hooks/useP2PSkinSync'
+import { useP2PChampionSync } from './hooks/useP2PChampionSync'
 
 // Atoms
 import {
@@ -162,6 +163,7 @@ function AppContent(): React.JSX.Element {
 
   // Initialize P2P skin sync
   useP2PSkinSync(downloadedSkins)
+  const { autoSyncedSkins } = useP2PChampionSync({ downloadedSkins })
 
   // Refs
   const dragCounter = useRef(0)
@@ -194,14 +196,37 @@ function AppContent(): React.JSX.Element {
     onAutoSelectSkin: async (champion) => {
       if (!championData) return
 
-      // Get available skins based on settings
-      let availableSkins = champion.skins.filter((skin) => skin.num !== 0)
-
-      // Filter to only rarity skins if autoRandomRaritySkinEnabled
+      // Check which auto mode is enabled
+      const autoRandomFavoriteSkinEnabled = await window.api.getSettings(
+        'autoRandomFavoriteSkinEnabled'
+      )
       const autoRandomRaritySkinEnabled = await window.api.getSettings(
         'autoRandomRaritySkinEnabled'
       )
-      if (autoRandomRaritySkinEnabled) {
+
+      let availableSkins = champion.skins.filter((skin) => skin.num !== 0)
+
+      if (autoRandomFavoriteSkinEnabled) {
+        // Get favorites for this champion
+        const favoritesResult = await window.api.getFavoritesByChampion(champion.key)
+        if (
+          !favoritesResult.success ||
+          !favoritesResult.favorites ||
+          favoritesResult.favorites.length === 0
+        ) {
+          // No favorites for this champion, skip auto-selection
+          console.log(
+            `No favorite skins found for champion ${champion.key}, skipping auto-selection`
+          )
+          return
+        }
+
+        // Filter skins to only those that are favorited
+        availableSkins = champion.skins.filter(
+          (skin) => favoritesResult.favorites?.some((fav) => fav.skinId === skin.id) || false
+        )
+      } else if (autoRandomRaritySkinEnabled) {
+        // Filter to only rarity skins
         availableSkins = availableSkins.filter((skin) => skin.rarity && skin.rarity !== 'kNoRarity')
       }
 
@@ -211,8 +236,20 @@ function AppContent(): React.JSX.Element {
       const randomIndex = Math.floor(Math.random() * availableSkins.length)
       const randomSkin = availableSkins[randomIndex]
 
-      // Add the skin using handleSkinClick
-      handleSkinClick(champion, randomSkin)
+      // Add the auto-selected skin
+      const newSelectedSkin = {
+        championKey: champion.key,
+        championName: champion.name,
+        skinId: randomSkin.id,
+        skinName: randomSkin.name,
+        skinNameEn: randomSkin.nameEn,
+        lolSkinsName: randomSkin.lolSkinsName,
+        skinNum: randomSkin.num,
+        chromaId: undefined,
+        isDownloaded: false,
+        isAutoSelected: true
+      }
+      setSelectedSkins((prev) => [...prev, newSelectedSkin])
     }
   })
 
@@ -322,7 +359,8 @@ function AppContent(): React.JSX.Element {
           lolSkinsName: skin.lolSkinsName,
           skinNum: skin.num,
           chromaId: chromaId,
-          isDownloaded: false
+          isDownloaded: false,
+          isAutoSelected: false
         }
         setSelectedSkins((prev) => [...prev, newSelectedSkin])
       }
@@ -357,10 +395,70 @@ function AppContent(): React.JSX.Element {
 
   // Apply filters and sort
   const applyFiltersAndSort = (skins: Array<{ champion: Champion; skin: Skin }>) => {
-    const filtered = [...skins]
+    let filtered = [...skins]
 
-    // Apply filters...
-    // This is simplified - you can add the full filtering logic here
+    // Apply download status filter
+    if (filters.downloadStatus !== 'all') {
+      filtered = filtered.filter(({ champion, skin }) => {
+        const skinFileName = `${skin.nameEn || skin.name}.zip`.replace(/:/g, '')
+        const isDownloaded = downloadedSkins.some(
+          (ds) => ds.championName === champion.key && ds.skinName === skinFileName
+        )
+
+        if (filters.downloadStatus === 'downloaded') {
+          return isDownloaded
+        } else {
+          return !isDownloaded
+        }
+      })
+    }
+
+    // Apply chroma status filter
+    if (filters.chromaStatus !== 'all') {
+      filtered = filtered.filter(({ skin }) => {
+        const hasChromas = skin.chromas && skin.chromaList && skin.chromaList.length > 0
+
+        if (filters.chromaStatus === 'has-chromas') {
+          return hasChromas
+        } else {
+          return !hasChromas
+        }
+      })
+    }
+
+    // Apply rarity filter
+    if (filters.rarity !== 'all') {
+      filtered = filtered.filter(({ skin }) => {
+        return skin.rarity === filters.rarity
+      })
+    }
+
+    // Apply champion tag filter
+    if (filters.championTags.length > 0) {
+      filtered = filtered.filter(({ champion }) => {
+        return filters.championTags.some((tag) => champion.tags.includes(tag))
+      })
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'name-asc':
+          return (a.skin.nameEn || a.skin.name).localeCompare(b.skin.nameEn || b.skin.name)
+        case 'name-desc':
+          return (b.skin.nameEn || b.skin.name).localeCompare(a.skin.nameEn || a.skin.name)
+        case 'skin-asc':
+          return a.skin.num - b.skin.num
+        case 'skin-desc':
+          return b.skin.num - a.skin.num
+        case 'champion':
+          return (a.champion.nameEn || a.champion.name).localeCompare(
+            b.champion.nameEn || b.champion.name
+          )
+        default:
+          return 0
+      }
+    })
 
     return filtered
   }
@@ -762,6 +860,7 @@ function AppContent(): React.JSX.Element {
           statusMessage={statusMessage}
           errorMessage={errorMessage}
           gamePath={gamePath}
+          autoSyncedSkins={autoSyncedSkins}
         />
 
         {/* Drop overlay */}

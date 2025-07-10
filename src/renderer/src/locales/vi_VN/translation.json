@@ -80,7 +80,8 @@
     "deletedCustomMod": "Đã xóa mod tùy chỉnh: {{name}}",
     "deletedSkin": "Đã xóa trang phục: {{name}}",
     "failedToDeleteMod": "Không thể xóa mod: {{error}}",
-    "failedToDeleteSkin": "Không thể xóa trang phục: {{error}}"
+    "failedToDeleteSkin": "Không thể xóa trang phục: {{error}}",
+    "autoSelectedSkinsCleanedUp": "Đã dọn dẹp {{count}} trang phục được chọn tự động"
   },
   "tools": {
     "required": "Cần Công Cụ CS:LOL",
@@ -122,6 +123,10 @@
     "autoRandomRaritySkin": {
       "title": "Tự động chọn skin hiếm ngẫu nhiên",
       "description": "Tự động chọn một skin ngẫu nhiên có độ hiếm (Epic, Legendary, v.v.) khi phát hiện tướng"
+    },
+    "autoRandomFavoriteSkin": {
+      "title": "Tự động chọn skin yêu thích ngẫu nhiên",
+      "description": "Tự động chọn một skin ngẫu nhiên từ danh sách yêu thích của bạn khi phát hiện tướng"
     }
   },
   "fileUpload": {
@@ -155,7 +160,7 @@
   "error": "Lỗi",
   "update": {
     "available": "Có bản cập nhật",
-    "description": "Đã có phiên bản mới của Chommicha để tải xuống.",
+    "description": "Đã có phiên bản mới của chommicha để tải xuống.",
     "whatsNew": "Có gì mới",
     "downloading": "Đang tải xuống...",
     "updateNow": "Cập nhật ngay",
@@ -185,7 +190,8 @@
     "manage": "Quản lý",
     "manageDownloaded": "Quản lý trang phục đã tải",
     "downloadedCount": "Trang phục đã tải ({{count}})",
-    "allSkins": "Tất cả trang phục"
+    "allSkins": "Tất cả trang phục",
+    "autoSelected": "Tự động"
   },
   "filters": {
     "title": "Bộ lọc & Sắp xếp",
@@ -258,8 +264,7 @@
   },
   "social": {
     "joinDiscord": "Tham gia Discord",
-    "viewGithub": "Xem trên GitHub",
-    "donate": "Ủng hộ"
+    "viewGithub": "Xem trên GitHub"
   },
   "lcu": {
     "connected": "Đã kết nối với League Client",

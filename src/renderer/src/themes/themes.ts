@@ -1,10 +1,10 @@
 import { Theme } from './types'
 
-// Default theme - based on current Chommicha colors
+// Default theme - based on current chommicha colors
 export const defaultLightTheme: Theme = {
   id: 'default-light',
   name: 'Default Light',
-  description: 'Classic Chommicha theme with warm terracotta accents',
+  description: 'Classic chommicha theme with warm terracotta accents',
   isDark: false,
   colors: {
     primary: {
@@ -61,7 +61,7 @@ export const defaultLightTheme: Theme = {
 export const defaultDarkTheme: Theme = {
   id: 'default-dark',
   name: 'Default Dark',
-  description: 'Classic Chommicha dark theme',
+  description: 'Classic chommicha dark theme',
   isDark: true,
   colors: {
     primary: {

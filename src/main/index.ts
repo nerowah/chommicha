@@ -19,7 +19,18 @@ import { lcuConnector } from './services/lcuConnector'
 import { gameflowMonitor } from './services/gameflowMonitor'
 import { teamCompositionMonitor } from './services/teamCompositionMonitor'
 import { skinApplyService } from './services/skinApplyService'
-import type { SelectedSkin } from './types/index'
+// Import SelectedSkin type from renderer atoms
+interface SelectedSkin {
+  championKey: string
+  championName: string
+  skinId: string
+  skinName: string
+  skinNameEn?: string
+  lolSkinsName?: string
+  skinNum: number
+  chromaId?: string
+  isDownloaded?: boolean
+}
 
 // Initialize services
 const gameDetector = new GameDetector()
@@ -401,13 +412,19 @@ function setupIpcHandlers(): void {
   // Smart apply handler - applies only team-relevant skins
   ipcMain.handle(
     'smart-apply-skins',
-    async (_, gamePath: string, selectedSkins: SelectedSkin[], teamChampionIds: number[]) => {
+    async (
+      _,
+      gamePath: string,
+      selectedSkins: SelectedSkin[],
+      teamChampionIds: number[],
+      autoSyncedSkins?: SelectedSkin[]
+    ) => {
       try {
+        // Combine selected skins and auto-synced skins
+        const allSkins = [...selectedSkins, ...(autoSyncedSkins || [])]
+
         // Filter skins based on team composition
-        const filteredSkins = await skinApplyService.getSmartApplySkins(
-          selectedSkins,
-          teamChampionIds
-        )
+        const filteredSkins = await skinApplyService.getSmartApplySkins(allSkins, teamChampionIds)
 
         // Convert to the format expected by run-patcher
         const skinKeys = filteredSkins.map((skin) => {
@@ -575,6 +592,15 @@ function setupIpcHandlers(): void {
   ipcMain.handle('get-favorites', async () => {
     try {
       const favorites = favoritesService.getFavorites()
+      return { success: true, favorites }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('get-favorites-by-champion', async (_, championKey: string) => {
+    try {
+      const favorites = favoritesService.getFavoritesByChampion(championKey)
       return { success: true, favorites }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -887,8 +913,15 @@ function setupIpcHandlers(): void {
 
   ipcMain.handle(
     'team:get-smart-apply-summary',
-    async (_, selectedSkins: SelectedSkin[], teamChampionIds: number[]) => {
-      const summary = await skinApplyService.getSmartApplySummary(selectedSkins, teamChampionIds)
+    async (
+      _,
+      selectedSkins: SelectedSkin[],
+      teamChampionIds: number[],
+      autoSyncedSkins?: SelectedSkin[]
+    ) => {
+      // Combine selected skins and auto-synced skins
+      const allSkins = [...selectedSkins, ...(autoSyncedSkins || [])]
+      const summary = await skinApplyService.getSmartApplySummary(allSkins, teamChampionIds)
       return { success: true, summary }
     }
   )

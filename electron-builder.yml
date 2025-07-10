@@ -1,5 +1,5 @@
 appId: com.chommicha.app
-productName: Chommicha
+productName: chommicha
 directories:
   buildResources: build
 files:
@@ -12,16 +12,16 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: Chommicha
+  executableName: chommicha
   target:
     - nsis
   icon: build/icon.ico
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  artifactName: Chommicha-${version}-setup.${ext}
-  shortcutName: Chommicha
-  uninstallDisplayName: Chommicha - League of Legends Skin Changer
+  artifactName: chommicha-${version}-setup.${ext}
+  shortcutName: chommicha
+  uninstallDisplayName: chommicha - League of Legends Skin Changer
   createDesktopShortcut: always
   createStartMenuShortcut: true
   deleteAppDataOnUninstall: false

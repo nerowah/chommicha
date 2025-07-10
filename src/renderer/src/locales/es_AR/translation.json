@@ -80,7 +80,8 @@
     "deletedCustomMod": "Mod personalizado eliminado: {{name}}",
     "deletedSkin": "Skin eliminado: {{name}}",
     "failedToDeleteMod": "Error al eliminar mod: {{error}}",
-    "failedToDeleteSkin": "Error al eliminar skin: {{error}}"
+    "failedToDeleteSkin": "Error al eliminar skin: {{error}}",
+    "autoSelectedSkinsCleanedUp": "Se limpiaron {{count}} skins seleccionados automáticamente"
   },
   "tools": {
     "required": "Se requieren herramientas CS:LOL",
@@ -120,6 +121,10 @@
     "autoRandomRaritySkin": {
       "title": "Skin de rareza aleatorio automático",
       "description": "Seleccionar automáticamente un skin aleatorio con rareza (Épico, Legendario, etc.) cuando se detecta un campeón"
+    },
+    "autoRandomFavoriteSkin": {
+      "title": "Skin favorito aleatorio automático",
+      "description": "Seleccionar automáticamente un skin aleatorio de tus favoritos cuando se detecta un campeón"
     }
   },
   "errors": {
@@ -161,7 +166,7 @@
   "error": "Error",
   "update": {
     "available": "Actualización disponible",
-    "description": "Hay una nueva versión de Chommicha disponible para descargar.",
+    "description": "Hay una nueva versión de chommicha disponible para descargar.",
     "whatsNew": "Novedades",
     "downloading": "Descargando...",
     "updateNow": "Actualizar ahora",
@@ -194,7 +199,8 @@
     "manage": "Administrar",
     "manageDownloaded": "Administrar skins descargados",
     "downloadedCount": "Skins descargados ({{count}})",
-    "allSkins": "Todos los skins"
+    "allSkins": "Todos los skins",
+    "autoSelected": "Auto"
   },
   "filters": {
     "title": "Filtros y ordenamiento",
@@ -269,8 +275,7 @@
   },
   "social": {
     "joinDiscord": "Unirse a Discord",
-    "viewGithub": "Ver en GitHub",
-    "donate": "Donar"
+    "viewGithub": "Ver en GitHub"
   },
   "lcu": {
     "connected": "Conectado al cliente de League",

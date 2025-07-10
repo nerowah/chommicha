@@ -80,7 +80,8 @@
     "deletedCustomMod": "已删除自定义模组：{{name}}",
     "deletedSkin": "已删除皮肤：{{name}}",
     "failedToDeleteMod": "删除模组失败：{{error}}",
-    "failedToDeleteSkin": "删除皮肤失败：{{error}}"
+    "failedToDeleteSkin": "删除皮肤失败：{{error}}",
+    "autoSelectedSkinsCleanedUp": "已清理 {{count}} 个自动选择的皮肤"
   },
   "tools": {
     "required": "需要 CS:LOL 工具",
@@ -120,6 +121,10 @@
     "autoRandomRaritySkin": {
       "title": "自动随机稀有度皮肤",
       "description": "检测到英雄时自动选择带有稀有度（史诗、传说等）的随机皮肤"
+    },
+    "autoRandomFavoriteSkin": {
+      "title": "自动随机收藏皮肤",
+      "description": "检测到英雄时自动从收藏中选择随机皮肤"
     }
   },
   "errors": {
@@ -161,7 +166,7 @@
   "error": "错误",
   "update": {
     "available": "有可用更新",
-    "description": "Chommicha 的新版本可供下载。",
+    "description": "chommicha 的新版本可供下载。",
     "whatsNew": "新功能",
     "downloading": "下载中...",
     "updateNow": "立即更新",
@@ -194,7 +199,8 @@
     "manage": "管理",
     "manageDownloaded": "管理已下载的皮肤",
     "downloadedCount": "已下载皮肤 ({{count}})",
-    "allSkins": "所有皮肤"
+    "allSkins": "所有皮肤",
+    "autoSelected": "自动"
   },
   "filters": {
     "title": "筛选和排序",
@@ -269,8 +275,7 @@
   },
   "social": {
     "joinDiscord": "加入 Discord",
-    "viewGithub": "在 GitHub 上查看",
-    "donate": "捐赠"
+    "viewGithub": "在 GitHub 上查看"
   },
   "lcu": {
     "connected": "已连接到英雄联盟客户端",

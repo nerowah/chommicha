@@ -1,9 +1,9 @@
 {
   "name": "chommicha",
-  "version": "1.9.2",
-  "description": "Chommicha - League of Legends Skin Changer",
+  "version": "1.10.0",
+  "description": "chommicha - League of Legends Skin Changer",
   "main": "./out/main/index.js",
-  "author": "Chommicha Team",
+  "author": "chommicha Team",
   "homepage": "https://github.com/chommicha/chommicha",
   "scripts": {
     "format": "prettier --write .",
