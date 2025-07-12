@@ -70,6 +70,7 @@
     "stopped": "Đã dừng patcher",
     "error": "Lỗi: {{message}}",
     "fetchingData": "Đang tải dữ liệu tướng...",
+    "autoAcceptedMatch": "Đã tự động chấp nhận trận đấu!",
     "dataFetched": "Đã tải thành công dữ liệu cho {{count}} tướng!",
     "gamePathSet": "Đã thiết lập đường dẫn game thành công!",
     "pleaseSetGamePath": "Vui lòng thiết lập đường dẫn game trước",
@@ -116,6 +117,30 @@
       "title": "Tự động áp dụng",
       "description": "Tự động áp dụng trang phục khi tất cả tướng đã khóa"
     },
+    "autoApplyTriggerTime": {
+      "title": "Thời gian kích hoạt tự động áp dụng",
+      "description": "Số giây trước khi trận đấu bắt đầu để tự động áp dụng trang phục (5-30 giây)"
+    },
+    "autoAccept": {
+      "title": "Tự động chấp nhận trận",
+      "description": "Tự động chấp nhận khi tìm thấy trận đấu"
+    },
+    "autoPick": {
+      "title": "Tự động chọn tướng",
+      "description": "Tự động chọn tướng trong giai đoạn chọn tướng",
+      "force": "Ép chọn",
+      "forceDescription": "Ghi đè lựa chọn của đội và chọn ngay cả khi đã được chọn",
+      "championPriority": "Danh sách ưu tiên chọn"
+    },
+    "autoBan": {
+      "title": "Tự động cấm tướng",
+      "description": "Tự động cấm tướng trong giai đoạn cấm chọn",
+      "force": "Ép cấm",
+      "forceDescription": "Ghi đè ý định của đội và cấm ngay cả khi đồng đội muốn chơi",
+      "championPriority": "Danh sách ưu tiên cấm"
+    },
+    "selectChampion": "Chọn tướng",
+    "addChampion": "Thêm tướng",
     "autoRandomSkin": {
       "title": "Tự động chọn skin ngẫu nhiên",
       "description": "Tự động chọn một skin ngẫu nhiên khi phát hiện tướng"
@@ -127,6 +152,22 @@
     "autoRandomFavoriteSkin": {
       "title": "Tự động chọn skin yêu thích ngẫu nhiên",
       "description": "Tự động chọn một skin ngẫu nhiên từ danh sách yêu thích của bạn khi phát hiện tướng"
+    },
+    "allowMultipleSkinsPerChampion": {
+      "title": "Cho phép nhiều skin cho mỗi tướng",
+      "description": "Bật để sử dụng nhiều skin cho cùng một tướng đồng thời"
+    },
+    "autoFixModIssues": {
+      "title": "Tự động sửa lỗi mod khi nhập",
+      "description": "Tự động sửa lỗi thanh máu thiếu, vật liệu thiếu và hiệu ứng VFX khi nhập mod"
+    },
+    "tabs": {
+      "leagueClient": "League Client",
+      "skinManagement": "Quản lý Trang phục"
+    },
+    "randomSkinSelection": {
+      "title": "Chọn Trang phục Ngẫu nhiên",
+      "none": "Tắt"
     }
   },
   "fileUpload": {
@@ -153,7 +194,26 @@
     "succeeded": "thành công",
     "failed": "thất bại",
     "failedFiles": "Các tệp thất bại:",
-    "close": "Đóng"
+    "close": "Đóng",
+    "fixModIssues": "Sửa lỗi mod",
+    "fixModIssuesDescription": "Sửa lỗi thanh máu thiếu, vật liệu thiếu và hiệu ứng VFX"
+  },
+  "editCustomSkin": {
+    "title": "Chỉnh Sửa Mod Tùy Chỉnh",
+    "modName": "Tên Mod",
+    "modNamePlaceholder": "Nhập tên mod",
+    "previewImage": "Ảnh Xem Trước (Tùy chọn)",
+    "selectImage": "Chọn Ảnh",
+    "newImageSelected": "Đã chọn ảnh mới",
+    "modMaintenance": "Bảo Trì Mod",
+    "fixModIssues": "Sửa Lỗi Mod",
+    "fixing": "Đang sửa...",
+    "fixDescription": "Sửa lỗi thanh máu thiếu, vật liệu thiếu và hiệu ứng VFX",
+    "startingFix": "Bắt đầu quá trình sửa lỗi...",
+    "fixCompleted": "Sửa lỗi hoàn thành!",
+    "fixFailed": "Sửa lỗi thất bại: {{error}}",
+    "fixError": "Đã xảy ra lỗi khi sửa mod",
+    "saveChanges": "Lưu Thay Đổi"
   },
   "cancel": "Hủy",
   "success": "Thành công",
@@ -264,7 +324,8 @@
   },
   "social": {
     "joinDiscord": "Tham gia Discord",
-    "viewGithub": "Xem trên GitHub"
+    "viewGithub": "Xem trên GitHub",
+    "donate": "Ủng hộ"
   },
   "lcu": {
     "connected": "Đã kết nối với League Client",

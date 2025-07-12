@@ -9,7 +9,8 @@ import {
   lcuSelectedChampionAtom,
   isChampionLockedAtom,
   autoViewSkinsEnabledAtom,
-  autoRandomRaritySkinEnabledAtom
+  autoRandomRaritySkinEnabledAtom,
+  autoRandomFavoriteSkinEnabledAtom
 } from '../store/atoms/lcu.atoms'
 import {
   leagueClientEnabledAtom,
@@ -45,6 +46,7 @@ export function useChampionSelectHandler({
   const [isChampionLocked, setIsChampionLocked] = useAtom(isChampionLockedAtom)
   const [autoViewSkinsEnabled] = useAtom(autoViewSkinsEnabledAtom)
   const [autoRandomRaritySkinEnabled] = useAtom(autoRandomRaritySkinEnabledAtom)
+  const [autoRandomFavoriteSkinEnabled] = useAtom(autoRandomFavoriteSkinEnabledAtom)
   const [leagueClientEnabled] = useAtom(leagueClientEnabledAtom)
   const [championDetectionEnabled] = useAtom(championDetectionEnabledAtom)
   const setSelectedChampionKey = useSetAtom(selectedChampionKeyAtom)
@@ -138,7 +140,7 @@ export function useChampionSelectHandler({
       // Find the champion by ID
       const champion = champions.find((c) => c.id === data.championId)
       if (!champion) {
-        console.warn(`Champion with ID ${data.championId} not found`)
+        console.warn(`[ChampionSelectHandler] Champion with ID ${data.championId} not found`)
         return
       }
 
@@ -147,7 +149,7 @@ export function useChampionSelectHandler({
       setIsChampionLocked(data.isLocked)
 
       // Handle auto random skin selection
-      if (onAutoSelectSkin && autoRandomRaritySkinEnabled) {
+      if (onAutoSelectSkin && (autoRandomRaritySkinEnabled || autoRandomFavoriteSkinEnabled)) {
         onAutoSelectSkin(champion)
       }
     },
@@ -157,6 +159,7 @@ export function useChampionSelectHandler({
       leagueClientEnabled,
       championDetectionEnabled,
       autoRandomRaritySkinEnabled,
+      autoRandomFavoriteSkinEnabled,
       onAutoSelectSkin,
       setLcuSelectedChampion,
       setIsChampionLocked

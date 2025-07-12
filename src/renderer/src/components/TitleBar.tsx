@@ -65,7 +65,6 @@ export function TitleBar({ appVersion }: TitleBarProps) {
 
         {/* Social Links */}
         <div className="flex items-center gap-1 ml-2">
-
           <Button
             variant="ghost"
             size="icon"

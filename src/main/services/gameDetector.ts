@@ -13,21 +13,56 @@ export class GameDetector {
     return null
   }
 
+  private async getAvailableDrives(): Promise<string[]> {
+    const drives: string[] = []
+
+    if (process.platform === 'win32') {
+      try {
+        // Use WMIC to get available drives
+        const { stdout } = await execAsync('wmic logicaldisk get caption')
+        const lines = stdout.split('\n')
+
+        for (const line of lines) {
+          const match = line.match(/^([A-Z]):/)
+          if (match) {
+            drives.push(match[1])
+          }
+        }
+      } catch (error) {
+        console.error('Failed to get available drives:', error)
+        // Fallback to common drives if WMIC fails
+        return ['C', 'D', 'E', 'F', 'G', 'H']
+      }
+    }
+
+    return drives.length > 0 ? drives : ['C', 'D', 'E', 'F', 'G', 'H']
+  }
+
   private async detectWindows(): Promise<string | null> {
-    // Try common installation paths - need to check Game subfolder
-    const commonPaths = [
-      'C:\\Riot Games\\League of Legends\\Game',
-      'D:\\Riot Games\\League of Legends\\Game',
-      'C:\\Program Files\\Riot Games\\League of Legends\\Game',
-      'C:\\Program Files (x86)\\Riot Games\\League of Legends\\Game',
-      'E:\\Riot Games\\League of Legends\\Game',
-      'F:\\Riot Games\\League of Legends\\Game'
-    ]
+    // Try common installation paths - check all available drives
+    const commonPaths: string[] = []
+
+    // Get all available drive letters dynamically
+    const driveLetters = await this.getAvailableDrives()
+
+    // Build paths for each drive
+    for (const drive of driveLetters) {
+      commonPaths.push(`${drive}:\\Riot Games\\League of Legends\\Game`)
+      commonPaths.push(`${drive}:\\Program Files\\Riot Games\\League of Legends\\Game`)
+      commonPaths.push(`${drive}:\\Program Files (x86)\\Riot Games\\League of Legends\\Game`)
+    }
 
     for (const gamePath of commonPaths) {
       if (await this.isValidGamePath(gamePath)) {
+        console.log('GameDetector: Found game at:', gamePath)
         return gamePath
       }
+    }
+
+    // Try RiotClientInstalls.json
+    const riotInstallsPath = await this.detectFromRiotClientInstalls()
+    if (riotInstallsPath) {
+      return riotInstallsPath
     }
 
     // Try multiple methods to find running process
@@ -142,6 +177,56 @@ export class GameDetector {
     }
 
     return null
+  }
+
+  private async detectFromRiotClientInstalls(): Promise<string | null> {
+    try {
+      const riotInstallsPath = 'C:\\ProgramData\\Riot Games\\RiotClientInstalls.json'
+
+      // Check if file exists
+      try {
+        await fs.access(riotInstallsPath)
+      } catch {
+        // File doesn't exist, return null
+        return null
+      }
+
+      // Read and parse the JSON file
+      const fileContent = await fs.readFile(riotInstallsPath, 'utf-8')
+      const data = JSON.parse(fileContent)
+
+      // Check if associated_client exists
+      if (!data.associated_client || typeof data.associated_client !== 'object') {
+        return null
+      }
+
+      // Look for League of Legends path in associated_client
+      for (const [installPath] of Object.entries(data.associated_client)) {
+        // Check if this is a League of Legends installation
+        if (installPath.toLowerCase().includes('league of legends')) {
+          // Normalize the path (convert forward slashes to backslashes)
+          let normalizedPath = installPath.replace(/\//g, '\\')
+
+          // Remove trailing slash if present
+          if (normalizedPath.endsWith('\\')) {
+            normalizedPath = normalizedPath.slice(0, -1)
+          }
+
+          // Append Game folder
+          const gamePath = path.join(normalizedPath, 'Game')
+
+          // Validate the path
+          if (await this.isValidGamePath(gamePath)) {
+            return gamePath
+          }
+        }
+      }
+
+      return null
+    } catch (error) {
+      console.error('Failed to detect from RiotClientInstalls.json:', error)
+      return null
+    }
   }
 
   private async isValidGamePath(gamePath: string): Promise<boolean> {

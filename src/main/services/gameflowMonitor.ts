@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events'
 import { lcuConnector } from './lcuConnector'
+import { settingsService } from './settingsService'
 
 interface ChampSelectSession {
   gameId: number
@@ -14,6 +15,7 @@ interface ChampSelectSession {
   actions: Array<
     Array<{
       id: number
+      actorCellId: number
       type: string
       championId: number
       completed: boolean
@@ -24,7 +26,7 @@ interface ChampSelectSession {
 
 export class GameflowMonitor extends EventEmitter {
   private currentPhase: string = 'None'
-  private lastSelectedChampionId: number | null = null
+  private lastLockedChampionId: number | null = null
   private monitoringActive: boolean = false
   private sessionCheckInterval: NodeJS.Timeout | null = null
 
@@ -54,7 +56,7 @@ export class GameflowMonitor extends EventEmitter {
 
     // Reset state
     this.currentPhase = 'None'
-    this.lastSelectedChampionId = null
+    this.lastLockedChampionId = null
   }
 
   private setupEventListeners(): void {
@@ -77,7 +79,7 @@ export class GameflowMonitor extends EventEmitter {
 
     lcuConnector.on('disconnected', () => {
       this.currentPhase = 'None'
-      this.lastSelectedChampionId = null
+      this.lastLockedChampionId = null
       this.stopSessionMonitoring()
     })
   }
@@ -90,9 +92,11 @@ export class GameflowMonitor extends EventEmitter {
 
     if (phase === 'ChampSelect') {
       this.startChampSelectMonitoring()
+    } else if (phase === 'ReadyCheck') {
+      this.handleReadyCheck()
     } else {
       this.stopSessionMonitoring()
-      this.lastSelectedChampionId = null
+      this.lastLockedChampionId = null
     }
   }
 
@@ -137,21 +141,37 @@ export class GameflowMonitor extends EventEmitter {
       return
     }
 
-    // Check for champion selection (either locked or intent)
-    const selectedChampionId = localPlayer.championId || localPlayer.championPickIntent
+    const currentChampionId = localPlayer.championId || localPlayer.championPickIntent
 
-    if (selectedChampionId && selectedChampionId !== this.lastSelectedChampionId) {
-      this.lastSelectedChampionId = selectedChampionId
+    if (currentChampionId) {
+      // Check if this champion is actually locked by checking the actions
+      let isActuallyLocked = false
 
-      const isLocked = !!localPlayer.championId
-      const isHover = !localPlayer.championId && !!localPlayer.championPickIntent
+      if (session.actions && localPlayer.championId) {
+        const allActions = session.actions.flat()
+        const localPlayerPickAction = allActions.find(
+          (action) =>
+            action.actorCellId === session.localPlayerCellId &&
+            action.type === 'pick' &&
+            action.championId === localPlayer.championId
+        )
 
-      this.emit('champion-selected', {
-        championId: selectedChampionId,
-        isLocked: isLocked,
-        isHover: isHover,
-        session: session
-      })
+        if (localPlayerPickAction) {
+          isActuallyLocked = localPlayerPickAction.completed
+        }
+      }
+
+      // Check if this is a newly locked champion
+      if (isActuallyLocked && localPlayer.championId !== this.lastLockedChampionId) {
+        this.lastLockedChampionId = localPlayer.championId
+
+        this.emit('champion-selected', {
+          championId: localPlayer.championId,
+          isLocked: true,
+          isHover: false,
+          session: session
+        })
+      }
     }
   }
 
@@ -161,6 +181,33 @@ export class GameflowMonitor extends EventEmitter {
 
   isInChampSelect(): boolean {
     return this.currentPhase === 'ChampSelect'
+  }
+
+  private async handleReadyCheck(): Promise<void> {
+    // Check if auto-accept is enabled
+    const autoAcceptEnabled = settingsService.get('autoAcceptEnabled')
+
+    if (!autoAcceptEnabled) {
+      return
+    }
+
+    // Wait 2 seconds before accepting (like the reference implementation)
+    setTimeout(async () => {
+      try {
+        // Make sure we're still in ReadyCheck phase
+        const currentPhase = await lcuConnector.getGameflowPhase()
+        if (currentPhase !== 'ReadyCheck') {
+          return
+        }
+
+        // Accept the ready check
+        await lcuConnector.request('POST', '/lol-matchmaking/v1/ready-check/accept')
+
+        this.emit('ready-check-accepted')
+      } catch (error) {
+        console.error('[GameflowMonitor] Failed to auto-accept ready check:', error)
+      }
+    }, 2000)
   }
 }
 

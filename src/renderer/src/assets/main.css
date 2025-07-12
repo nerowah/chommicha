@@ -86,43 +86,6 @@
     animation: cardAppear 0.4s ease-out forwards;
   }
 
-  /* Stagger animation for grid items */
-  .grid > div {
-    animation: cardAppear 0.4s ease-out forwards;
-    opacity: 0;
-  }
-
-  .grid > div:nth-child(1) {
-    animation-delay: 0ms;
-  }
-  .grid > div:nth-child(2) {
-    animation-delay: 50ms;
-  }
-  .grid > div:nth-child(3) {
-    animation-delay: 100ms;
-  }
-  .grid > div:nth-child(4) {
-    animation-delay: 150ms;
-  }
-  .grid > div:nth-child(5) {
-    animation-delay: 200ms;
-  }
-  .grid > div:nth-child(6) {
-    animation-delay: 250ms;
-  }
-  .grid > div:nth-child(7) {
-    animation-delay: 300ms;
-  }
-  .grid > div:nth-child(8) {
-    animation-delay: 350ms;
-  }
-  .grid > div:nth-child(9) {
-    animation-delay: 400ms;
-  }
-  .grid > div:nth-child(10) {
-    animation-delay: 450ms;
-  }
-
   /* Slide up animation for drawer */
   @keyframes slideUp {
     from {
@@ -137,5 +100,57 @@
 
   .animate-slide-up {
     animation: slideUp 0.3s ease-out forwards;
+  }
+
+  /* Overlay window styles */
+  .overlay-window {
+    background: transparent !important;
+  }
+
+  .overlay-window body {
+    background: transparent !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  .overlay-window #root {
+    background: transparent !important;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Override theme backgrounds for overlay */
+  .overlay-window .bg-background {
+    background: transparent !important;
+  }
+
+  .overlay-window .bg-base {
+    background: transparent !important;
+  }
+
+  /* Ensure overlay works with theme transitions */
+  .overlay-window * {
+    @apply transition-colors duration-200;
+  }
+
+  /* Semi-transparent backdrop for better visibility */
+  .overlay-backdrop {
+    @apply bg-black/20 backdrop-blur-sm;
+  }
+
+  /* React Easy Sort styles */
+  .dragged {
+    opacity: 0.5;
+  }
+
+  /* Disable text selection and image dragging in sortable items */
+  [data-react-easy-sort-item] {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  [data-react-easy-sort-item] img {
+    pointer-events: none;
+    -webkit-user-drag: none;
   }
 }

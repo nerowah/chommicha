@@ -157,6 +157,12 @@ export interface IApi {
   lcuGetStatus: () => Promise<{ connected: boolean; gameflowPhase: string }>
   lcuGetCurrentPhase: () => Promise<{ success: boolean; phase?: string; error?: string }>
   lcuGetChampSelectSession: () => Promise<{ success: boolean; session?: any; error?: string }>
+  lcuGetOwnedChampions: () => Promise<{ success: boolean; champions?: any[]; error?: string }>
+  lcuGetAllChampions: () => Promise<{ success: boolean; champions?: any[]; error?: string }>
+
+  // Auto Ban/Pick APIs
+  setAutoPickChampions: (championIds: number[]) => Promise<{ success: boolean; error?: string }>
+  setAutoBanChampions: (championIds: number[]) => Promise<{ success: boolean; error?: string }>
 
   // LCU Events
   onLcuConnected: (callback: () => void) => () => void
@@ -167,6 +173,7 @@ export interface IApi {
   onLcuChampionSelected: (
     callback: (data: { championId: number; isLocked: boolean; isHover: boolean }) => void
   ) => () => void
+  onLcuReadyCheckAccepted: (callback: () => void) => () => void
 
   // Team Composition APIs
   getTeamComposition: () => Promise<{
@@ -203,6 +210,25 @@ export interface IApi {
     }) => void
   ) => () => void
   onTeamReset: (callback: (newPhase?: string) => void) => () => void
+
+  // Overlay management
+  createOverlay: () => Promise<{ success: boolean; error?: string }>
+  destroyOverlay: () => Promise<{ success: boolean; error?: string }>
+  setOverlayAutoSelectedSkin: (skinData: {
+    championKey: string
+    championName: string
+    skinId: string | number
+    skinName: string
+    skinNum: number
+    rarity?: string
+  }) => Promise<{ success: boolean; error?: string }>
+
+  // MultiRitoFixes API
+  checkMultiRitoFixTool: () => Promise<{ success: boolean; exists?: boolean; error?: string }>
+  downloadMultiRitoFixTool: () => Promise<{ success: boolean; error?: string }>
+  fixModIssues: (modPath: string) => Promise<{ success: boolean; error?: string; output?: string }>
+  onMultiRitoFixDownloadProgress: (callback: (progress: number) => void) => () => void
+  onFixModProgress: (callback: (message: string) => void) => () => void
 }
 
 declare global {

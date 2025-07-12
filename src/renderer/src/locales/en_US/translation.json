@@ -71,6 +71,7 @@
     "stopped": "Patcher stopped",
     "error": "Error: {{message}}",
     "fetchingData": "Fetching champion data...",
+    "autoAcceptedMatch": "Match automatically accepted!",
     "dataFetched": "Successfully fetched data for {{count}} champions!",
     "gamePathSet": "Game path set successfully!",
     "pleaseSetGamePath": "Please set game path first",
@@ -117,6 +118,30 @@
       "title": "Auto Apply",
       "description": "Automatically apply skins when all champions are locked"
     },
+    "autoApplyTriggerTime": {
+      "title": "Auto Apply Trigger Time",
+      "description": "Seconds before game starts to automatically apply skins (5-30 seconds)"
+    },
+    "autoAccept": {
+      "title": "Auto Accept Match",
+      "description": "Automatically accept ready check when a match is found"
+    },
+    "autoPick": {
+      "title": "Auto Pick",
+      "description": "Automatically pick champions during champion select",
+      "force": "Force Pick",
+      "forceDescription": "Override team picks and pick even if already selected",
+      "championPriority": "Pick Priority List"
+    },
+    "autoBan": {
+      "title": "Auto Ban",
+      "description": "Automatically ban champions during champion select",
+      "force": "Force Ban",
+      "forceDescription": "Override team intent and ban even if teammate wants to play",
+      "championPriority": "Ban Priority List"
+    },
+    "selectChampion": "Select champion",
+    "addChampion": "Add Champion",
     "autoRandomSkin": {
       "title": "Auto Random Skin",
       "description": "Automatically select a random skin when a champion is detected"
@@ -128,6 +153,26 @@
     "autoRandomFavoriteSkin": {
       "title": "Auto Random Favorite Skin",
       "description": "Automatically select a random skin from your favorites when a champion is detected"
+    },
+    "inGameOverlay": {
+      "title": "In-Game Overlay",
+      "description": "Pre-attach overlay to League client for faster skin notifications (requires any Auto Random feature)"
+    },
+    "allowMultipleSkinsPerChampion": {
+      "title": "Allow Multiple Skins per Champion",
+      "description": "Enable to use multiple skins for the same champion simultaneously"
+    },
+    "autoFixModIssues": {
+      "title": "Auto-fix mod issues on import",
+      "description": "Automatically fix missing health bars, materials, and VFX when importing mods"
+    },
+    "tabs": {
+      "leagueClient": "League Client",
+      "skinManagement": "Skin Management"
+    },
+    "randomSkinSelection": {
+      "title": "Random Skin Selection",
+      "none": "Disabled"
     }
   },
   "fileUpload": {
@@ -154,7 +199,26 @@
     "succeeded": "succeeded",
     "failed": "failed",
     "failedFiles": "Failed files:",
-    "close": "Close"
+    "close": "Close",
+    "fixModIssues": "Fix mod issues",
+    "fixModIssuesDescription": "Fixes missing health bars, materials, and VFX"
+  },
+  "editCustomSkin": {
+    "title": "Edit Custom Mod",
+    "modName": "Mod Name",
+    "modNamePlaceholder": "Enter mod name",
+    "previewImage": "Preview Image (Optional)",
+    "selectImage": "Select Image",
+    "newImageSelected": "New image selected",
+    "modMaintenance": "Mod Maintenance",
+    "fixModIssues": "Fix Mod Issues",
+    "fixing": "Fixing...",
+    "fixDescription": "Fixes missing health bars, materials, and VFX issues",
+    "startingFix": "Starting fix process...",
+    "fixCompleted": "Fix completed successfully!",
+    "fixFailed": "Fix failed: {{error}}",
+    "fixError": "An error occurred while fixing the mod",
+    "saveChanges": "Save Changes"
   },
   "cancel": "Cancel",
   "success": "Success",
@@ -270,7 +334,8 @@
   },
   "social": {
     "joinDiscord": "Join Discord",
-    "viewGithub": "View on GitHub"
+    "viewGithub": "View on GitHub",
+    "donate": "Donate"
   },
   "lcu": {
     "connected": "Connected to League Client",

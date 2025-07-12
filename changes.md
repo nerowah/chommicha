@@ -1,7 +1,12 @@
-### Ljadid awlad nas
+### Features
 
-- Auto synced skins with champion selection and stuff (hadchi mazal test)
-- Auto delete auto-selected skins
-- tzad random skin mn favourites dyalk
-- Special skins not showing (Immortalized Ahri for example)
-- Filter panel rah wla khdam (khdmtona lay3tikom lhwa)
+- Auto apply trigger time
+- Add MultiRitoFixes support for custom mods
+- Auto ban/pick (not tested)
+- Auto accept match
+
+### Fixes
+
+- Overlay not showing the right selected skin
+- Random skins from favourites not working
+- LCU Lockfile not detected like game path detection.

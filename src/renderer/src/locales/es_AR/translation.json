@@ -94,6 +94,14 @@
     "language": "Idioma",
     "theme": "Tema",
     "notifications": "Notificaciones",
+    "tabs": {
+      "leagueClient": "Cliente de League",
+      "skinManagement": "Gestión de Aspectos"
+    },
+    "randomSkinSelection": {
+      "title": "Selección Aleatoria de Aspectos",
+      "none": "Deshabilitado"
+    },
     "leagueClient": {
       "title": "Integración con el Cliente de League",
       "description": "Habilitar funciones que se conectan con el cliente de League of Legends"
@@ -106,6 +114,26 @@
       "title": "Ver skins automáticamente",
       "description": "Ver skins automáticamente cuando se detecta un campeón (omite el diálogo de confirmación)"
     },
+    "autoAcceptMatch": {
+      "title": "Aceptar partida automáticamente",
+      "description": "Aceptar automáticamente la verificación de listo cuando se encuentre una partida"
+    },
+    "autoPick": {
+      "title": "Selección automática",
+      "description": "Seleccionar campeones automáticamente durante la selección de campeón",
+      "force": "Forzar selección",
+      "forceDescription": "Anular selección del equipo y elegir aunque ya esté seleccionado",
+      "championPriority": "Lista de prioridad de selección"
+    },
+    "autoBan": {
+      "title": "Baneo automático",
+      "description": "Banear campeones automáticamente durante la selección de campeón",
+      "force": "Forzar baneo",
+      "forceDescription": "Anular intención del equipo y banear aunque un compañero quiera jugarlo",
+      "championPriority": "Lista de prioridad de baneos"
+    },
+    "selectChampion": "Seleccionar campeón",
+    "addChampion": "Agregar campeón",
     "smartApply": {
       "title": "Aplicación inteligente",
       "description": "Solo cargar skins para los campeones de tu equipo (reduce el tiempo de carga)"
@@ -113,6 +141,10 @@
     "autoApply": {
       "title": "Aplicación automática",
       "description": "Aplicar skins automáticamente cuando todos los campeones estén bloqueados"
+    },
+    "autoApplyTriggerTime": {
+      "title": "Tiempo de activación de aplicación automática",
+      "description": "Segundos antes de que comience la partida para aplicar skins automáticamente (5-30 segundos)"
     },
     "autoRandomSkin": {
       "title": "Skin aleatorio automático",
@@ -125,6 +157,14 @@
     "autoRandomFavoriteSkin": {
       "title": "Skin favorito aleatorio automático",
       "description": "Seleccionar automáticamente un skin aleatorio de tus favoritos cuando se detecta un campeón"
+    },
+    "allowMultipleSkinsPerChampion": {
+      "title": "Permitir múltiples skins por campeón",
+      "description": "Habilitar para usar múltiples skins para el mismo campeón simultáneamente"
+    },
+    "autoFixModIssues": {
+      "title": "Auto-arreglar problemas del mod al importar",
+      "description": "Automáticamente arregla barras de vida faltantes, materiales faltantes y efectos VFX al importar mods"
     }
   },
   "errors": {
@@ -136,6 +176,7 @@
     "skinNotAvailable": "El skin no está disponible en el repositorio lol-skins o el mapeo es incorrecto"
   },
   "fileUpload": {
+    "selectChampion": "Seleccionar campeón",
     "uploadButton": "Subir mod personalizado",
     "importTitle": "Importar mod personalizado",
     "importDescription": "Opcionalmente seleccioná un campeón y establecé un nombre personalizado para tu mod.",
@@ -159,7 +200,26 @@
     "succeeded": "exitosos",
     "failed": "fallidos",
     "failedFiles": "Archivos fallidos:",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "fixModIssues": "Arreglar problemas del mod",
+    "fixModIssuesDescription": "Arregla barras de vida faltantes, materiales faltantes y efectos VFX"
+  },
+  "editCustomSkin": {
+    "title": "Editar Mod Personalizado",
+    "modName": "Nombre del Mod",
+    "modNamePlaceholder": "Ingresa el nombre del mod",
+    "previewImage": "Imagen de Vista Previa (Opcional)",
+    "selectImage": "Seleccionar Imagen",
+    "newImageSelected": "Nueva imagen seleccionada",
+    "modMaintenance": "Mantenimiento del Mod",
+    "fixModIssues": "Arreglar Problemas del Mod",
+    "fixing": "Arreglando...",
+    "fixDescription": "Arregla barras de vida faltantes, materiales faltantes y efectos VFX",
+    "startingFix": "Iniciando proceso de arreglo...",
+    "fixCompleted": "¡Arreglo completado exitosamente!",
+    "fixFailed": "Arreglo falló: {{error}}",
+    "fixError": "Ocurrió un error al arreglar el mod",
+    "saveChanges": "Guardar Cambios"
   },
   "cancel": "Cancelar",
   "success": "Éxito",
@@ -275,7 +335,8 @@
   },
   "social": {
     "joinDiscord": "Unirse a Discord",
-    "viewGithub": "Ver en GitHub"
+    "viewGithub": "Ver en GitHub",
+    "donate": "Donar"
   },
   "lcu": {
     "connected": "Conectado al cliente de League",
@@ -296,7 +357,8 @@
     "championLockedDescription": "Bloqueaste a {{champion}}. ¿Querés explorar los skins disponibles?",
     "championHoveredDescription": "Estás viendo a {{champion}}. ¿Querés explorar los skins disponibles?",
     "randomSkin": "Skin aleatorio",
-    "randomRaritySkin": "Skin de rareza aleatorio"
+    "randomRaritySkin": "Skin de rareza aleatorio",
+    "readyCheckAccepted": "¡Partida aceptada automáticamente!"
   },
   "smartApply": {
     "willApply": "Inteligente: {{count}}/{{total}}",

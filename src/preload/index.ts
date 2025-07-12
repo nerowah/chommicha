@@ -171,6 +171,14 @@ const api = {
   lcuGetStatus: () => ipcRenderer.invoke('lcu:get-status'),
   lcuGetCurrentPhase: () => ipcRenderer.invoke('lcu:get-current-phase'),
   lcuGetChampSelectSession: () => ipcRenderer.invoke('lcu:get-champ-select-session'),
+  lcuGetOwnedChampions: () => ipcRenderer.invoke('lcu:get-owned-champions'),
+  lcuGetAllChampions: () => ipcRenderer.invoke('lcu:get-all-champions'),
+
+  // Auto Ban/Pick APIs
+  setAutoPickChampions: (championIds: number[]) =>
+    ipcRenderer.invoke('set-auto-pick-champions', championIds),
+  setAutoBanChampions: (championIds: number[]) =>
+    ipcRenderer.invoke('set-auto-ban-champions', championIds),
 
   // LCU Events
   onLcuConnected: (callback: () => void) => {
@@ -192,6 +200,10 @@ const api = {
     const handler = (_: any, data: any) => callback(data)
     ipcRenderer.on('lcu:champion-selected', handler)
     return () => ipcRenderer.removeListener('lcu:champion-selected', handler)
+  },
+  onLcuReadyCheckAccepted: (callback: () => void) => {
+    ipcRenderer.on('lcu:ready-check-accepted', callback)
+    return () => ipcRenderer.removeListener('lcu:ready-check-accepted', callback)
   },
 
   // Team Composition APIs
@@ -229,7 +241,6 @@ const api = {
     }) => void
   ) => {
     const handler = (_: any, data: any) => {
-      console.log('[Preload] Ready for smart apply event received:', data)
       callback(data)
     }
     ipcRenderer.on('team:ready-for-smart-apply', handler)
@@ -239,6 +250,33 @@ const api = {
     const handler = (_: any, newPhase?: string) => callback(newPhase)
     ipcRenderer.on('team:reset', handler)
     return () => ipcRenderer.removeListener('team:reset', handler)
+  },
+
+  // Overlay management
+  createOverlay: () => ipcRenderer.invoke('create-overlay'),
+  destroyOverlay: () => ipcRenderer.invoke('destroy-overlay'),
+  setOverlayAutoSelectedSkin: (skinData: {
+    championKey: string
+    championName: string
+    skinId: string | number
+    skinName: string
+    skinNum: number
+    rarity?: string
+  }) => ipcRenderer.invoke('set-overlay-auto-selected-skin', skinData),
+
+  // MultiRitoFixes API
+  checkMultiRitoFixTool: () => ipcRenderer.invoke('check-multiritofix-tool'),
+  downloadMultiRitoFixTool: () => ipcRenderer.invoke('download-multiritofix-tool'),
+  fixModIssues: (modPath: string) => ipcRenderer.invoke('fix-mod-issues', modPath),
+  onMultiRitoFixDownloadProgress: (callback: (progress: number) => void) => {
+    const handler = (_: any, progress: number) => callback(progress)
+    ipcRenderer.on('multiritofix-download-progress', handler)
+    return () => ipcRenderer.removeListener('multiritofix-download-progress', handler)
+  },
+  onFixModProgress: (callback: (message: string) => void) => {
+    const handler = (_: any, message: string) => callback(message)
+    ipcRenderer.on('fix-mod-progress', handler)
+    return () => ipcRenderer.removeListener('fix-mod-progress', handler)
   }
 }
 

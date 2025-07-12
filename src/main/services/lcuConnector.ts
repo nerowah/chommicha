@@ -5,6 +5,7 @@ import * as https from 'https'
 import WebSocket from 'ws'
 import { app } from 'electron'
 import axios from 'axios'
+import { GamePathService } from './gamePathService'
 
 interface LCUCredentials {
   protocol: string
@@ -115,7 +116,7 @@ export class LCUConnector extends EventEmitter {
     }
 
     const message = JSON.stringify([5, eventName])
-    console.log('[LCUConnector] Subscribing to event:', eventName)
+
     this.ws.send(message)
     this.subscriptions.add(eventName)
 
@@ -148,8 +149,18 @@ export class LCUConnector extends EventEmitter {
       return response.data
     } catch (error: any) {
       if (error.response) {
-        console.error(`LCU: HTTP ${error.response.status} for ${endpoint}:`, error.response.data)
-        throw new Error(`LCU request failed: ${error.response.status}`)
+        // Suppress 404 errors for champ-select endpoint as they're expected when not in champ select
+        const isChampSelectEndpoint = endpoint.includes('/lol-champ-select/')
+        const is404Error = error.response.status === 404
+
+        if (!isChampSelectEndpoint || !is404Error) {
+          console.error(`LCU: HTTP ${error.response.status} for ${endpoint}:`, error.response.data)
+        }
+
+        // Include httpStatus in the error for easier handling
+        const err: any = new Error(`LCU request failed: ${error.response.status}`)
+        err.httpStatus = error.response.status
+        throw err
       } else if (error.request) {
         console.error('LCU: No response from server:', error.message)
         throw new Error('No response from League client')
@@ -177,34 +188,74 @@ export class LCUConnector extends EventEmitter {
     }
   }
 
+  async performChampSelectAction(actionId: number, championId: number): Promise<any> {
+    try {
+      return await this.request('PATCH', `/lol-champ-select/v1/session/actions/${actionId}`, {
+        championId,
+        completed: true
+      })
+    } catch (error) {
+      console.error('[LCUConnector] Failed to perform champ select action:', error)
+      throw error
+    }
+  }
+
+  async getOwnedChampions(): Promise<any> {
+    try {
+      return await this.request('GET', '/lol-champions/v1/owned-champions-minimal')
+    } catch (error) {
+      console.error('[LCUConnector] Failed to get owned champions:', error)
+      return []
+    }
+  }
+
+  async getAllChampions(): Promise<any> {
+    try {
+      return await this.request('GET', '/lol-game-data/assets/v1/champion-summary.json')
+    } catch (error) {
+      console.error('[LCUConnector] Failed to get all champions:', error)
+      return []
+    }
+  }
+
   isConnected(): boolean {
     return this.connected
   }
 
   private async findLockfile(): Promise<LCUCredentials | null> {
-    const possiblePaths = [
-      'C:\\Riot Games\\League of Legends\\lockfile',
-      'D:\\Riot Games\\League of Legends\\lockfile',
-      'E:\\Riot Games\\League of Legends\\lockfile',
-      'C:\\Program Files\\Riot Games\\League of Legends\\lockfile',
-      'C:\\Program Files (x86)\\Riot Games\\League of Legends\\lockfile',
-      '/Applications/League of Legends.app/Contents/LoL/lockfile',
-      path.join(app.getPath('home'), 'Riot Games/League of Legends/lockfile')
-    ]
+    const possiblePaths: string[] = []
 
-    // Also check if game path is set in settings
+    // Use the centralized GamePathService
     try {
-      const { SettingsService } = await import('./settingsService')
-      const settingsService = new SettingsService()
-      const gamePath = settingsService.get('gamePath')
-      if (gamePath && typeof gamePath === 'string') {
-        // Game path points to the "Game" folder, we need to go up one level
-        const leaguePath = path.dirname(gamePath)
-        const gamePathLockfile = path.join(leaguePath, 'lockfile')
-        possiblePaths.unshift(gamePathLockfile)
+      const gamePathService = GamePathService.getInstance()
+      const lockfilePath = await gamePathService.getLockfilePath()
+
+      if (lockfilePath) {
+        possiblePaths.push(lockfilePath)
+        console.log('LCU: Using detected lockfile path:', lockfilePath)
       }
     } catch (error) {
-      console.error('Failed to get game path from settings:', error)
+      console.error('Failed to get lockfile path from GamePathService:', error)
+    }
+
+    // Add common fallback paths if detection failed
+    if (possiblePaths.length === 0) {
+      const fallbackPaths = [
+        'C:\\Riot Games\\League of Legends\\lockfile',
+        'D:\\Riot Games\\League of Legends\\lockfile',
+        'E:\\Riot Games\\League of Legends\\lockfile',
+        'F:\\Riot Games\\League of Legends\\lockfile',
+        'G:\\Riot Games\\League of Legends\\lockfile',
+        'H:\\Riot Games\\League of Legends\\lockfile',
+        'C:\\Program Files\\Riot Games\\League of Legends\\lockfile',
+        'C:\\Program Files (x86)\\Riot Games\\League of Legends\\lockfile',
+        'D:\\Program Files\\Riot Games\\League of Legends\\lockfile',
+        'D:\\Program Files (x86)\\Riot Games\\League of Legends\\lockfile',
+        '/Applications/League of Legends.app/Contents/LoL/lockfile',
+        path.join(app.getPath('home'), 'Riot Games/League of Legends/lockfile')
+      ]
+
+      possiblePaths.push(...fallbackPaths)
     }
 
     for (const lockfilePath of possiblePaths) {
@@ -318,18 +369,12 @@ export class LCUConnector extends EventEmitter {
             if (opcode === 8 && eventName) {
               // Log champion select events
               if (eventName.includes('lol-champ-select')) {
-                console.log(
-                  '[LCUConnector] Champion select event:',
-                  eventName,
-                  eventData?.eventType
-                )
               }
 
               this.emit('event', eventName, eventData)
 
               // Emit specific events
               if (eventName === 'OnJsonApiEvent_lol-gameflow_v1_gameflow-phase') {
-                console.log('[LCUConnector] Gameflow phase changed:', eventData?.data)
                 this.emit('gameflow-phase', eventData?.data)
               } else if (eventName === 'OnJsonApiEvent_lol-champ-select_v1_session') {
                 this.emit('champ-select-session', eventData?.data)

@@ -95,8 +95,8 @@ export function UpdateDialog({ isOpen, onClose }: UpdateDialogProps) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Update kayna awl9</DialogTitle>
-          <DialogDescription>A new version of chommicha is available for charji.</DialogDescription>
+          <DialogTitle>Update Available</DialogTitle>
+          <DialogDescription>A new version of chommicha is available for download.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

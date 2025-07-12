@@ -94,6 +94,14 @@
     "language": "언어",
     "theme": "테마",
     "notifications": "알림",
+    "tabs": {
+      "leagueClient": "리그 클라이언트",
+      "skinManagement": "스킨 관리"
+    },
+    "randomSkinSelection": {
+      "title": "무작위 스킨 선택",
+      "none": "비활성화"
+    },
     "leagueClient": {
       "title": "리그 클라이언트 통합",
       "description": "리그 오브 레전드 클라이언트와 연결되는 기능 활성화"
@@ -106,6 +114,26 @@
       "title": "스킨 자동 보기",
       "description": "챔피언이 감지될 때 스킨을 자동으로 표시 (확인 대화상자 건너뛰기)"
     },
+    "autoAcceptMatch": {
+      "title": "대전 자동 수락",
+      "description": "대전이 찾아지면 준비 확인을 자동으로 수락"
+    },
+    "autoPick": {
+      "title": "자동 픽",
+      "description": "챔피언 선택 중 자동으로 챔피언 선택",
+      "force": "강제 픽",
+      "forceDescription": "팀 선택을 무시하고 이미 선택되어도 픽",
+      "championPriority": "픽 우선순위 목록"
+    },
+    "autoBan": {
+      "title": "자동 밴",
+      "description": "챔피언 선택 중 자동으로 챔피언 밴",
+      "force": "강제 밴",
+      "forceDescription": "팀 의도를 무시하고 팀원이 플레이하고 싶어해도 밴",
+      "championPriority": "밴 우선순위 목록"
+    },
+    "selectChampion": "챔피언 선택",
+    "addChampion": "챔피언 추가",
     "smartApply": {
       "title": "스마트 적용",
       "description": "팀의 챔피언 스킨만 로드 (로딩 시간 단축)"
@@ -113,6 +141,10 @@
     "autoApply": {
       "title": "자동 적용",
       "description": "모든 챔피언이 잠긴 후 스킨을 자동으로 적용"
+    },
+    "autoApplyTriggerTime": {
+      "title": "자동 적용 트리거 시간",
+      "description": "게임 시작 전 스킨을 자동으로 적용하기까지의 시간(초) (5-30초)"
     },
     "autoRandomSkin": {
       "title": "자동 랜덤 스킨",
@@ -125,6 +157,14 @@
     "autoRandomFavoriteSkin": {
       "title": "자동 랜덤 즐겨찾기 스킨",
       "description": "챔피언이 감지될 때 즐겨찾기에서 랜덤 스킨을 자동으로 선택"
+    },
+    "allowMultipleSkinsPerChampion": {
+      "title": "챔피언당 여러 스킨 허용",
+      "description": "활성화하면 동일한 챔피언에 여러 스킨을 동시에 사용할 수 있습니다"
+    },
+    "autoFixModIssues": {
+      "title": "가져오기 시 모드 문제 자동 해결",
+      "description": "모드를 가져올 때 누락된 체력바, 재료, VFX 효과를 자동으로 수정합니다"
     }
   },
   "errors": {
@@ -136,6 +176,7 @@
     "skinNotAvailable": "스킨이 lol-skins 저장소에서 사용할 수 없거나 매핑이 잘못되었습니다"
   },
   "fileUpload": {
+    "selectChampion": "챔피언 선택",
     "uploadButton": "커스텀 모드 업로드",
     "importTitle": "커스텀 모드 가져오기",
     "importDescription": "선택적으로 챔피언을 선택하고 모드에 커스텀 이름을 설정하세요.",
@@ -159,7 +200,26 @@
     "succeeded": "성공",
     "failed": "실패",
     "failedFiles": "실패한 파일:",
-    "close": "닫기"
+    "close": "닫기",
+    "fixModIssues": "모드 문제 해결",
+    "fixModIssuesDescription": "누락된 체력바, 재료, VFX 효과를 수정합니다"
+  },
+  "editCustomSkin": {
+    "title": "사용자 정의 모드 편집",
+    "modName": "모드 이름",
+    "modNamePlaceholder": "모드 이름을 입력하세요",
+    "previewImage": "미리보기 이미지 (선택사항)",
+    "selectImage": "이미지 선택",
+    "newImageSelected": "새 이미지가 선택되었습니다",
+    "modMaintenance": "모드 유지보수",
+    "fixModIssues": "모드 문제 해결",
+    "fixing": "수정 중...",
+    "fixDescription": "누락된 체력바, 재료, VFX 효과를 수정합니다",
+    "startingFix": "수정 프로세스를 시작하는 중...",
+    "fixCompleted": "수정이 성공적으로 완료되었습니다!",
+    "fixFailed": "수정에 실패했습니다: {{error}}",
+    "fixError": "모드를 수정하는 중 오류가 발생했습니다",
+    "saveChanges": "변경사항 저장"
   },
   "cancel": "취소",
   "success": "성공",
@@ -275,7 +335,8 @@
   },
   "social": {
     "joinDiscord": "Discord 참가",
-    "viewGithub": "GitHub에서 보기"
+    "viewGithub": "GitHub에서 보기",
+    "donate": "후원"
   },
   "lcu": {
     "connected": "리그 클라이언트에 연결됨",
@@ -296,7 +357,8 @@
     "championLockedDescription": "{{champion}}을(를) 잠겼습니다. 사용 가능한 스킨을 보시겠습니까?",
     "championHoveredDescription": "{{champion}}을(를) 보고 계십니다. 사용 가능한 스킨을 보시겠습니까?",
     "randomSkin": "랜덤 스킨",
-    "randomRaritySkin": "랜덤 희귀도 스킨"
+    "randomRaritySkin": "랜덤 희귀도 스킨",
+    "readyCheckAccepted": "대전이 자동으로 수락되었습니다!"
   },
   "smartApply": {
     "willApply": "스마트: {{count}}/{{total}}",

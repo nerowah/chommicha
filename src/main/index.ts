@@ -5,13 +5,12 @@ import fs from 'fs'
 import crypto from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { GameDetector } from './services/gameDetector'
 import { SkinDownloader } from './services/skinDownloader'
 import { ModToolsWrapper } from './services/modToolsWrapper'
 import { championDataService } from './services/championDataService'
 import { FavoritesService } from './services/favoritesService'
 import { ToolsDownloader } from './services/toolsDownloader'
-import { SettingsService } from './services/settingsService'
+import { settingsService } from './services/settingsService'
 import { UpdaterService } from './services/updaterService'
 import { FileImportService } from './services/fileImportService'
 import { ImageService } from './services/imageService'
@@ -19,6 +18,9 @@ import { lcuConnector } from './services/lcuConnector'
 import { gameflowMonitor } from './services/gameflowMonitor'
 import { teamCompositionMonitor } from './services/teamCompositionMonitor'
 import { skinApplyService } from './services/skinApplyService'
+import { overlayWindowManager } from './services/overlayWindowManager'
+import { autoBanPickService } from './services/autoBanPickService'
+import { multiRitoFixesService } from './services/multiRitoFixesService'
 // Import SelectedSkin type from renderer atoms
 interface SelectedSkin {
   championKey: string
@@ -33,15 +35,27 @@ interface SelectedSkin {
 }
 
 // Initialize services
-const gameDetector = new GameDetector()
 const skinDownloader = new SkinDownloader()
 const modToolsWrapper = new ModToolsWrapper()
 const favoritesService = new FavoritesService()
 const toolsDownloader = new ToolsDownloader()
-const settingsService = new SettingsService()
 const updaterService = new UpdaterService()
 const fileImportService = new FileImportService()
 const imageService = new ImageService()
+
+// Store auto-selected skin data from renderer for overlay display
+let rendererAutoSelectedSkin: {
+  championKey: string
+  championName: string
+  skinId: string | number
+  skinName: string
+  skinNum: number
+  splashPath?: string
+  rarity?: string
+} | null = null
+
+// Store the current champion ID for overlay display
+let currentChampionId: number | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -113,6 +127,30 @@ app.whenReady().then(async () => {
 
   createWindow()
 
+  // Create overlay if enabled in settings
+  const inGameOverlayEnabled = settingsService.get('inGameOverlayEnabled')
+  const autoRandomSkinEnabled = settingsService.get('autoRandomSkinEnabled')
+  const autoRandomRaritySkinEnabled = settingsService.get('autoRandomRaritySkinEnabled')
+  const autoRandomFavoriteSkinEnabled = settingsService.get('autoRandomFavoriteSkinEnabled')
+  const championDetectionEnabled = settingsService.get('championDetectionEnabled')
+  const leagueClientEnabled = settingsService.get('leagueClientEnabled')
+
+  const anyAutoRandomEnabled =
+    autoRandomSkinEnabled || autoRandomRaritySkinEnabled || autoRandomFavoriteSkinEnabled
+
+  if (
+    inGameOverlayEnabled &&
+    anyAutoRandomEnabled &&
+    championDetectionEnabled &&
+    leagueClientEnabled
+  ) {
+    try {
+      await overlayWindowManager.create()
+    } catch (error) {
+      console.error('[Main] Failed to create overlay on startup:', error)
+    }
+  }
+
   // Initialize LCU connection
   setupLCUConnection()
 
@@ -151,7 +189,9 @@ function setupIpcHandlers(): void {
   // Game detection
   ipcMain.handle('detect-game', async () => {
     try {
-      const gamePath = await gameDetector.detectGamePath()
+      const { GamePathService } = await import('./services/gamePathService')
+      const gamePathService = GamePathService.getInstance()
+      const gamePath = await gamePathService.forceDetect()
       return { success: true, gamePath }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -166,7 +206,15 @@ function setupIpcHandlers(): void {
     })
 
     if (!result.canceled && result.filePaths.length > 0) {
-      return { success: true, gamePath: result.filePaths[0] }
+      const { GamePathService } = await import('./services/gamePathService')
+      const gamePathService = GamePathService.getInstance()
+      const success = await gamePathService.setGamePath(result.filePaths[0])
+
+      if (success) {
+        return { success: true, gamePath: result.filePaths[0] }
+      } else {
+        return { success: false, error: 'Invalid game path selected' }
+      }
     }
     return { success: false }
   })
@@ -322,17 +370,20 @@ function setupIpcHandlers(): void {
       })
 
       // Validate for single skin per champion (after filtering)
-      const championCounts = new Map<string, number>()
-      for (const skinKey of filteredSkins) {
-        const champion = skinKey.split('/')[0]
-        championCounts.set(champion, (championCounts.get(champion) || 0) + 1)
-      }
+      const allowMultipleSkinsPerChampion = settingsService.get('allowMultipleSkinsPerChampion')
+      if (!allowMultipleSkinsPerChampion) {
+        const championCounts = new Map<string, number>()
+        for (const skinKey of filteredSkins) {
+          const champion = skinKey.split('/')[0]
+          championCounts.set(champion, (championCounts.get(champion) || 0) + 1)
+        }
 
-      for (const [champion, count] of championCounts.entries()) {
-        if (count > 1 && champion !== 'Custom') {
-          return {
-            success: false,
-            message: `Conflict: Only one skin per champion can be injected. You have selected ${count} skins for ${champion}.`
+        for (const [champion, count] of championCounts.entries()) {
+          if (count > 1 && champion !== 'Custom') {
+            return {
+              success: false,
+              message: `Conflict: Only one skin per champion can be injected. You have selected ${count} skins for ${champion}.`
+            }
           }
         }
       }
@@ -387,7 +438,7 @@ function setupIpcHandlers(): void {
         selectedSkins: skinInfosToProcess.map((s) => s.localPath),
         gamePath,
         noTFT: true,
-        ignoreConflict: false,
+        ignoreConflict: allowMultipleSkinsPerChampion || false,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -666,6 +717,13 @@ function setupIpcHandlers(): void {
 
   ipcMain.handle('set-settings', async (_, key: string, value: any) => {
     settingsService.set(key, value)
+
+    // If game path is being set, update the GamePathService cache
+    if (key === 'gamePath' && typeof value === 'string') {
+      const { GamePathService } = await import('./services/gamePathService')
+      const gamePathService = GamePathService.getInstance()
+      await gamePathService.setGamePath(value)
+    }
   })
 
   // Auto-updater handlers
@@ -741,6 +799,50 @@ function setupIpcHandlers(): void {
   ipcMain.handle('delete-custom-skin', async (_, modPath: string) => {
     try {
       const result = await fileImportService.deleteCustomSkin(modPath)
+      return result
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // MultiRitoFixes handlers
+  ipcMain.handle('check-multiritofix-tool', async () => {
+    try {
+      const exists = await toolsDownloader.checkMultiRitoFixesExist()
+      return { success: true, exists }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('download-multiritofix-tool', async (event) => {
+    try {
+      await toolsDownloader.downloadMultiRitoFixes((progress) => {
+        event.sender.send('multiritofix-download-progress', progress)
+      })
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('fix-mod-issues', async (event, modPath: string) => {
+    try {
+      // Check if it's a valid mod file
+      if (!multiRitoFixesService.isValidModFile(modPath)) {
+        return { success: false, error: 'Invalid mod file type' }
+      }
+
+      const result = await multiRitoFixesService.fixModWithDownload(
+        modPath,
+        (message) => {
+          event.sender.send('fix-mod-progress', message)
+        },
+        (progress) => {
+          event.sender.send('multiritofix-download-progress', progress)
+        }
+      )
+
       return result
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -900,6 +1002,43 @@ function setupIpcHandlers(): void {
     }
   })
 
+  // Auto Ban/Pick handlers
+  ipcMain.handle('lcu:get-owned-champions', async () => {
+    try {
+      const champions = await lcuConnector.getOwnedChampions()
+      return { success: true, champions }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('lcu:get-all-champions', async () => {
+    try {
+      const champions = await lcuConnector.getAllChampions()
+      return { success: true, champions }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('set-auto-pick-champions', async (_, championIds: number[]) => {
+    try {
+      await autoBanPickService.setPickChampions(championIds)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('set-auto-ban-champions', async (_, championIds: number[]) => {
+    try {
+      await autoBanPickService.setBanChampions(championIds)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
   // Team composition handlers
   ipcMain.handle('team:get-composition', () => {
     const composition = teamCompositionMonitor.getCurrentTeamComposition()
@@ -925,6 +1064,132 @@ function setupIpcHandlers(): void {
       return { success: true, summary }
     }
   )
+
+  // Overlay skin selection handler
+  overlayWindowManager.on('skin-selected', (skin: SelectedSkin) => {
+    // Send the selected skin to the main window
+    const mainWindow = BrowserWindow.getAllWindows().find(
+      (w) => !w.webContents.getURL().includes('overlay.html')
+    )
+    if (mainWindow) {
+      mainWindow.webContents.send('overlay:skin-selected', skin)
+    }
+  })
+
+  // Create overlay handler
+  ipcMain.handle('create-overlay', async () => {
+    try {
+      await overlayWindowManager.create()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Destroy overlay handler
+  ipcMain.handle('destroy-overlay', async () => {
+    try {
+      overlayWindowManager.destroy()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Handler for renderer to communicate auto-selected skin to main process
+  ipcMain.handle(
+    'set-overlay-auto-selected-skin',
+    async (
+      _,
+      skinData: {
+        championKey: string
+        championName: string
+        skinId: string | number
+        skinName: string
+        skinNum: number
+        rarity?: string
+      }
+    ) => {
+      try {
+        // Store the skin data with splash path for overlay
+        rendererAutoSelectedSkin = {
+          ...skinData,
+          splashPath: `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${skinData.championKey}_${skinData.skinNum}.jpg`
+        }
+
+        // Now show the overlay with the auto-selected skin
+        await showOverlayWithAutoSelectedSkin(skinData.championKey)
+
+        return { success: true }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+      }
+    }
+  )
+}
+
+// Show overlay with auto-selected skin data
+async function showOverlayWithAutoSelectedSkin(championKey: string): Promise<void> {
+  try {
+    if (!rendererAutoSelectedSkin || rendererAutoSelectedSkin.championKey !== championKey) {
+      return
+    }
+
+    // Get current language from settings
+    const currentLanguage = settingsService.get('language') || 'en_US'
+
+    // Get champion data
+    const champData = await championDataService.getChampionByKey(championKey, currentLanguage)
+    if (!champData) {
+      console.error('[Overlay] Champion data not found for key:', championKey)
+      return
+    }
+
+    // Get user settings
+    const autoRandomSkinEnabled = settingsService.get('autoRandomSkinEnabled') || false
+    const autoRandomRaritySkinEnabled = settingsService.get('autoRandomRaritySkinEnabled') || false
+    const autoRandomFavoriteSkinEnabled =
+      settingsService.get('autoRandomFavoriteSkinEnabled') || false
+    const championDetectionEnabled = settingsService.get('championDetectionEnabled') !== false
+
+    // Check if any auto-random feature is enabled
+    const autoRandomEnabled =
+      autoRandomSkinEnabled || autoRandomRaritySkinEnabled || autoRandomFavoriteSkinEnabled
+
+    if (!championDetectionEnabled || !autoRandomEnabled) {
+      return
+    }
+
+    // Prepare overlay data
+    const overlayData: any = {
+      championId: currentChampionId || parseInt(championKey), // Use stored ID or fallback
+      championKey: champData.key,
+      championName: champData.name,
+      skins: (champData.skins || []).map((skin: any) => ({
+        ...skin,
+        splashPath: `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champData.key}_${skin.num}.jpg`,
+        tilePath: `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champData.key}_${skin.num}.jpg`
+      })),
+      autoRandomEnabled,
+      autoSelectedSkin: rendererAutoSelectedSkin,
+      theme: null // Will be set by renderer based on current theme
+    }
+
+    // Ensure we only show overlay when we have valid auto-selected skin data
+    if (overlayData.autoSelectedSkin) {
+      // Hide any existing overlay first to ensure clean state
+      overlayWindowManager.hide()
+
+      // Small delay to ensure clean state before showing new data
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      await overlayWindowManager.show(overlayData)
+    } else {
+      console.warn('[Overlay] No auto-selected skin data, not showing overlay')
+    }
+  } catch (error) {
+    console.error('[Overlay] Error showing overlay with auto-selected skin:', error)
+  }
 }
 
 // Setup LCU connection and event forwarding
@@ -951,11 +1216,43 @@ function setupLCUConnection(): void {
     BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send('lcu:phase-changed', { phase, previousPhase })
     })
+
+    // Handle auto ban/pick based on phase
+    if (phase === 'ChampSelect') {
+      const autoPickEnabled = settingsService.get('autoPickEnabled')
+      const autoBanEnabled = settingsService.get('autoBanEnabled')
+      if (autoPickEnabled || autoBanEnabled) {
+        autoBanPickService.start()
+      }
+    } else if (phase !== 'ChampSelect' && previousPhase === 'ChampSelect') {
+      autoBanPickService.stop()
+    }
   })
 
-  gameflowMonitor.on('champion-selected', (data) => {
+  gameflowMonitor.on('champion-selected', async (data) => {
+    // Forward to all windows
     BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send('lcu:champion-selected', data)
+    })
+
+    // Store the current champion ID for overlay display
+    currentChampionId = data.championId
+
+    // Clear previous auto-selected skin data when a new champion is selected
+    if (
+      rendererAutoSelectedSkin &&
+      rendererAutoSelectedSkin.championKey !== data.championId.toString()
+    ) {
+      rendererAutoSelectedSkin = null
+    }
+
+    // Note: Overlay display is now handled when renderer sends auto-selected skin data
+  })
+
+  gameflowMonitor.on('ready-check-accepted', () => {
+    // Forward to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send('lcu:ready-check-accepted')
     })
   })
 
@@ -991,6 +1288,13 @@ function setupLCUConnection(): void {
   lcuConnector.on('connected', () => {
     gameflowMonitor.start()
     teamCompositionMonitor.start()
+
+    // Start auto ban/pick if enabled
+    const autoPickEnabled = settingsService.get('autoPickEnabled')
+    const autoBanEnabled = settingsService.get('autoBanEnabled')
+    if (autoPickEnabled || autoBanEnabled) {
+      autoBanPickService.start()
+    }
   })
 }
 
@@ -1001,15 +1305,21 @@ function cleanup(): void {
   // Stop monitoring services
   gameflowMonitor.stop()
   teamCompositionMonitor.stop()
+  autoBanPickService.stop()
 
   // Stop auto-connect and disconnect from LCU
   lcuConnector.stopAutoConnect()
   lcuConnector.disconnect()
 
+  // Clean up overlay window
+  overlayWindowManager.destroy()
+
   // Remove all listeners to prevent memory leaks
   lcuConnector.removeAllListeners()
   gameflowMonitor.removeAllListeners()
   teamCompositionMonitor.removeAllListeners()
+  overlayWindowManager.removeAllListeners()
+  autoBanPickService.removeAllListeners()
 }
 
 // Handle app quit events

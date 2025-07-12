@@ -94,6 +94,14 @@
     "language": "语言",
     "theme": "主题",
     "notifications": "通知",
+    "tabs": {
+      "leagueClient": "英雄联盟客户端",
+      "skinManagement": "皮肤管理"
+    },
+    "randomSkinSelection": {
+      "title": "随机皮肤选择",
+      "none": "已禁用"
+    },
     "leagueClient": {
       "title": "英雄联盟客户端集成",
       "description": "启用与英雄联盟客户端连接的功能"
@@ -106,6 +114,10 @@
       "title": "自动查看皮肤",
       "description": "检测到英雄时自动查看皮肤（跳过确认对话框）"
     },
+    "autoAcceptMatch": {
+      "title": "自动接受对局",
+      "description": "找到对局时自动接受准备检查"
+    },
     "smartApply": {
       "title": "智能应用",
       "description": "仅加载你团队中英雄的皮肤（减少加载时间）"
@@ -113,6 +125,10 @@
     "autoApply": {
       "title": "自动应用",
       "description": "所有英雄锁定后自动应用皮肤"
+    },
+    "autoApplyTriggerTime": {
+      "title": "自动应用触发时间",
+      "description": "游戏开始前自动应用皮肤的秒数（5-30秒）"
     },
     "autoRandomSkin": {
       "title": "自动随机皮肤",
@@ -125,6 +141,14 @@
     "autoRandomFavoriteSkin": {
       "title": "自动随机收藏皮肤",
       "description": "检测到英雄时自动从收藏中选择随机皮肤"
+    },
+    "allowMultipleSkinsPerChampion": {
+      "title": "允许每个英雄使用多个皮肤",
+      "description": "启用后可同时为同一英雄使用多个皮肤"
+    },
+    "autoFixModIssues": {
+      "title": "导入时自动修复模组问题",
+      "description": "导入模组时自动修复缺失的血条、材质和VFX效果"
     }
   },
   "errors": {
@@ -159,7 +183,26 @@
     "succeeded": "成功",
     "failed": "失败",
     "failedFiles": "失败的文件：",
-    "close": "关闭"
+    "close": "关闭",
+    "fixModIssues": "修复模组问题",
+    "fixModIssuesDescription": "修复缺失的血条、材质和VFX效果"
+  },
+  "editCustomSkin": {
+    "title": "编辑自定义模组",
+    "modName": "模组名称",
+    "modNamePlaceholder": "输入模组名称",
+    "previewImage": "预览图像（可选）",
+    "selectImage": "选择图像",
+    "newImageSelected": "已选择新图像",
+    "modMaintenance": "模组维护",
+    "fixModIssues": "修复模组问题",
+    "fixing": "修复中...",
+    "fixDescription": "修复缺失的血条、材质和VFX效果",
+    "startingFix": "开始修复过程...",
+    "fixCompleted": "修复成功完成！",
+    "fixFailed": "修复失败：{{error}}",
+    "fixError": "修复模组时发生错误",
+    "saveChanges": "保存更改"
   },
   "cancel": "取消",
   "success": "成功",
@@ -275,7 +318,8 @@
   },
   "social": {
     "joinDiscord": "加入 Discord",
-    "viewGithub": "在 GitHub 上查看"
+    "viewGithub": "在 GitHub 上查看",
+    "donate": "捐赠"
   },
   "lcu": {
     "connected": "已连接到英雄联盟客户端",
@@ -296,7 +340,8 @@
     "championLockedDescription": "您已锁定 {{champion}}。想要浏览可用的皮肤吗？",
     "championHoveredDescription": "您正在查看 {{champion}}。想要浏览可用的皮肤吗？",
     "randomSkin": "随机皮肤",
-    "randomRaritySkin": "随机稀有度皮肤"
+    "randomRaritySkin": "随机稀有度皮肤",
+    "readyCheckAccepted": "对局已自动接受！"
   },
   "smartApply": {
     "willApply": "智能：{{count}}/{{total}}",
