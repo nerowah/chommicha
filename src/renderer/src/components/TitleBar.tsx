@@ -65,11 +65,12 @@ export function TitleBar({ appVersion }: TitleBarProps) {
 
         {/* Social Links */}
         <div className="flex items-center gap-1 ml-2">
+
           <Button
             variant="ghost"
             size="icon"
             className="w-8 h-8 rounded"
-            onClick={() => handleOpenExternal('https://www.youtube.com/watch?v=xvFZjo5PgG0')}
+            onClick={() => handleOpenExternal('https://www.youtube.com/watch?v=xvFZjo5PgG0
             aria-label={t('social.joinDiscord')}
             title={t('social.joinDiscord')}
           >
@@ -85,7 +86,7 @@ export function TitleBar({ appVersion }: TitleBarProps) {
             variant="ghost"
             size="icon"
             className="w-8 h-8 rounded"
-            onClick={() => handleOpenExternal('https://pornhub.com/chommicha')}
+            onClick={() => handleOpenExternal('https://github.com/hoangvu12/chommicha')}
             aria-label={t('social.viewGithub')}
             title={t('social.viewGithub')}
           >

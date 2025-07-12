@@ -1,10 +1,10 @@
 {
-  "name": "chommicha",
-  "version": "1.12.0",
-  "description": "chommicha - League of Legends Skin Changer",
+  "name": "nerowah",
+  "version": "1.13.0",
+  "description": "nerowah - League of Legends Skin Changer",
   "main": "./out/main/index.js",
-  "author": "chommicha Team",
-  "homepage": "https://github.com/chommicha/chommicha",
+  "author": "nerowah Team",
+  "homepage": "https://github.com/nerowah/nerowah",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
