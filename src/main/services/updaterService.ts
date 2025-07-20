@@ -97,7 +97,7 @@ export class UpdaterService {
       }
 
       const owner = 'nerowah'
-      const repo = 'chommicha'
+      const repo = 'Chommicha'
       const version = this.updateInfo.version
 
       // Try to fetch changes.md from the GitHub release

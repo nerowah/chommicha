@@ -89,12 +89,44 @@
     "downloading": "Скачивание инструментов... {{progress}}%",
     "downloadTools": "Скачать инструменты"
   },
+  "downloadAll": {
+    "title": "Download All Skins",
+    "button": "Download All",
+    "optionsTitle": "Download All Skins",
+    "optionsDescription": "Choose which skins to download and configure download settings.",
+    "infoTitle": "Download Information",
+    "infoDescription": "Approximately {{count}} skins will be downloaded (~{{size}}).",
+    "filterOptions": "Filter Options",
+    "excludeChromas": "Exclude Chromas",
+    "excludeChromasDesc": "Skip chroma variants to reduce download size",
+    "excludeVariants": "Exclude Variants",
+    "excludeVariantsDesc": "Skip prestige editions and special variants",
+    "excludeLegacy": "Exclude Legacy Skins",
+    "excludeLegacyDesc": "Skip legacy and limited-time skins",
+    "excludeEsports": "Exclude Esports Skins",
+    "excludeEsportsDesc": "Skip championship and professional team skins",
+    "onlyFavorites": "Only Favorites",
+    "onlyFavoritesDesc": "Download only your favorited skins",
+    "performanceOptions": "Performance Options",
+    "concurrency": "Concurrent Downloads",
+    "concurrencyDesc": "Number of simultaneous downloads (higher = faster but more resource intensive)",
+    "startDownload": "Start Download",
+    "progress": "{{completed}} of {{total}} skins",
+    "speed": "Speed",
+    "timeRemaining": "Time remaining",
+    "failedDownloads": "{{count}} failed downloads",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "completed": "Download Complete"
+  },
   "settings": {
     "gamePath": "Путь к игре",
     "language": "Язык",
     "theme": "Тема",
     "notifications": "Уведомления",
     "tabs": {
+      "general": "Общие",
       "leagueClient": "Клиент League",
       "skinManagement": "Управление обликами"
     },
@@ -102,6 +134,18 @@
       "title": "Случайный выбор облика",
       "none": "Отключено"
     },
+    "minimizeToTray": {
+      "title": "Сворачивать в трей",
+      "description": "Скрывать приложение в системный трей вместо закрытия при нажатии кнопки закрытия"
+    }
+  },
+  "settings": {
+    "title": "Настройки",
+    "description": "Настройка параметров приложения",
+    "gamePath": "Путь к игре",
+    "language": "Язык",
+    "theme": "Тема",
+    "notifications": "Уведомления",
     "leagueClient": {
       "title": "Интеграция с клиентом League",
       "description": "Включить функции, которые подключаются к клиенту League of Legends"
@@ -158,6 +202,22 @@
       "title": "Авто случайный избранный скин",
       "description": "Автоматически выбирать случайный скин из избранного при обнаружении чемпиона"
     },
+    "autoRandomHighestWinRateSkin": {
+      "title": "Авто случайный скин с высоким винрейтом",
+      "description": "Автоматически выбирает случайный скин из топ-3 с самым высоким процентом побед"
+    },
+    "autoRandomHighestPickRateSkin": {
+      "title": "Авто случайный популярный скин",
+      "description": "Автоматически выбирает случайный скин из топ-3 самых популярных"
+    },
+    "autoRandomMostPlayedSkin": {
+      "title": "Авто случайный часто используемый скин",
+      "description": "Автоматически выбирает случайный скин из топ-3 наиболее используемых"
+    },
+    "inGameOverlay": {
+      "title": "Внутриигровой оверлей",
+      "description": "Предварительное подключение оверлея к клиенту League для быстрых уведомлений о скинах (требуется любая функция автовыбора)"
+    },
     "allowMultipleSkinsPerChampion": {
       "title": "Разрешить несколько скинов на чемпиона",
       "description": "Включите, чтобы использовать несколько скинов для одного чемпиона одновременно"
@@ -166,6 +226,13 @@
       "title": "Автоматически исправлять проблемы мода при импорте",
       "description": "Автоматически исправляет отсутствующие полосы здоровья, материалы и VFX эффекты при импорте модов"
     }
+  },
+  "tray": {
+    "show": "Показать Chommicha",
+    "hide": "Скрыть Chommicha",
+    "language": "Язык",
+    "openSettings": "Открыть настройки",
+    "quit": "Выйти из Chommicha"
   },
   "errors": {
     "generic": "Произошла ошибка",
@@ -221,12 +288,16 @@
     "fixError": "Произошла ошибка при исправлении мода",
     "saveChanges": "Сохранить изменения"
   },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
   "cancel": "Отмена",
   "success": "Успешно",
   "error": "Ошибка",
   "update": {
     "available": "Доступно обновление",
-    "description": "Новая версия chommicha доступна для скачивания.",
+    "description": "Новая версия Chommicha доступна для скачивания.",
     "whatsNew": "Что нового",
     "downloading": "Скачивание...",
     "updateNow": "Обновить сейчас",
@@ -254,6 +325,10 @@
     "selectChroma": "Выберите хрому для {{skinName}}",
     "chooseChroma_one": "Выберите из {{count}} доступной хромы",
     "chooseChroma_other": "Выберите из {{count}} доступных хром",
+    "selectVariant": "Выберите вариант для {{skinName}}",
+    "chooseVariant": "Выберите из {{count}} доступных {{type}}",
+    "exaltedVariant": "Возвышенные варианты",
+    "formVariant": "Варианты форм",
     "mySkins": "Мои скины",
     "roomSkins": "Скины комнаты",
     "manage": "Управление",
@@ -279,6 +354,14 @@
     "skinNumAsc": "Номер скина (по возрастанию)",
     "skinNumDesc": "Номер скина (по убыванию)",
     "championName": "Имя чемпиона",
+    "rarityAsc": "Редкость (низкая→высокая)",
+    "rarityDesc": "Редкость (высокая→низкая)",
+    "winRateDesc": "Процент побед (высокий→низкий)",
+    "winRateAsc": "Процент побед (низкий→высокий)",
+    "pickRateDesc": "Процент выбора (высокий→низкий)",
+    "pickRateAsc": "Процент выбора (низкий→высокий)",
+    "totalGamesDesc": "Сыграно игр (много→мало)",
+    "totalGamesAsc": "Сыграно игр (мало→много)",
     "rarity": "Редкость",
     "rarities": {
       "epic": "Эпический",

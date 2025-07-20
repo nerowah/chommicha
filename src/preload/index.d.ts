@@ -11,6 +11,44 @@ export interface IApi {
     skinName: string
   ) => Promise<{ success: boolean; error?: string }>
 
+  // Batch download management
+  downloadAllSkins: (
+    skinUrls: string[],
+    options?: { excludeChromas?: boolean; concurrency?: number }
+  ) => Promise<{ success: boolean; error?: string }>
+  pauseBatchDownload: () => Promise<{ success: boolean; error?: string }>
+  resumeBatchDownload: () => Promise<{ success: boolean; error?: string }>
+  cancelBatchDownload: () => Promise<{ success: boolean; error?: string }>
+  getBatchDownloadState: () => Promise<{
+    success: boolean
+    data?: {
+      totalSkins: number
+      completedSkins: number
+      currentSkin: string | null
+      currentProgress: number
+      downloadSpeed: number
+      timeRemaining: number
+      failedSkins: string[]
+      isRunning: boolean
+      isPaused: boolean
+    } | null
+    error?: string
+  }>
+  onDownloadAllSkinsProgress: (
+    callback: (progress: {
+      totalSkins: number
+      completedSkins: number
+      currentSkin: string | null
+      currentProgress: number
+      downloadSpeed: number
+      timeRemaining: number
+      failedSkins: string[]
+      isRunning: boolean
+      isPaused: boolean
+    }) => void
+  ) => () => void
+  retryFailedDownloads: () => Promise<{ success: boolean; error?: string }>
+
   // File import
   importSkinFile: (
     filePath: string,
@@ -54,13 +92,16 @@ export interface IApi {
   addFavorite: (
     championKey: string,
     skinId: string,
-    skinName: string
+    skinName: string,
+    chromaId?: string,
+    chromaName?: string
   ) => Promise<{ success: boolean; error?: string }>
   removeFavorite: (
     championKey: string,
-    skinId: string
+    skinId: string,
+    chromaId?: string
   ) => Promise<{ success: boolean; error?: string }>
-  isFavorite: (championKey: string, skinId: string) => Promise<boolean>
+  isFavorite: (championKey: string, skinId: string, chromaId?: string) => Promise<boolean>
   getFavorites: () => Promise<{ success: boolean; favorites?: any[]; error?: string }>
   getFavoritesByChampion: (
     championKey: string
@@ -86,6 +127,7 @@ export interface IApi {
   // Settings
   getSettings: (key?: string) => Promise<any>
   setSettings: (key: string, value: any) => Promise<void>
+  getSystemLocale: () => Promise<{ success: boolean; locale: string }>
 
   // Auto-updater
   checkForUpdates: () => Promise<{ success: boolean; updateInfo?: any; error?: string }>
@@ -174,6 +216,7 @@ export interface IApi {
     callback: (data: { championId: number; isLocked: boolean; isHover: boolean }) => void
   ) => () => void
   onLcuReadyCheckAccepted: (callback: () => void) => () => void
+  onLcuQueueIdDetected: (callback: (data: { queueId: number }) => void) => () => void
 
   // Team Composition APIs
   getTeamComposition: () => Promise<{
@@ -229,6 +272,23 @@ export interface IApi {
   fixModIssues: (modPath: string) => Promise<{ success: boolean; error?: string; output?: string }>
   onMultiRitoFixDownloadProgress: (callback: (progress: number) => void) => () => void
   onFixModProgress: (callback: (message: string) => void) => () => void
+
+  // Settings change events from tray
+  onSettingsChanged: (callback: (key: string, value: any) => void) => () => void
+  onOpenSettings: (callback: () => void) => () => void
+  onLanguageChanged: (callback: (language: string) => void) => () => void
+
+  // Skin update management
+  checkSkinUpdates: (
+    skinPaths?: string[]
+  ) => Promise<{ success: boolean; data?: Record<string, any>; error?: string }>
+  updateSkin: (skinInfo: SkinInfo) => Promise<{ success: boolean; data?: SkinInfo; error?: string }>
+  bulkUpdateSkins: (skinInfos: SkinInfo[]) => Promise<{
+    success: boolean
+    data?: { updated: SkinInfo[]; failed: Array<{ skin: SkinInfo; error: string }> }
+    error?: string
+  }>
+  generateMetadataForExistingSkins: () => Promise<{ success: boolean; error?: string }>
 }
 
 declare global {

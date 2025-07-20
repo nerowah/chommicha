@@ -2,6 +2,7 @@ import axios from 'axios'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import pLimit from 'p-limit'
+import * as cheerio from 'cheerio'
 import {
   fetchAllLolSkinsData,
   findBestSkinMatch,
@@ -15,7 +16,36 @@ import {
 const LOL_SKINS_DIRECTORY_PATH = path.join(process.cwd(), 'scripts', 'lol_skins_directory.txt')
 const LOL_SKINS_DIRECTORY = await fs.readFile(LOL_SKINS_DIRECTORY_PATH, 'utf-8')
 
-const SUPPORTED_LANGUAGES = ['en_US', 'vi_VN', 'es_AR', 'ja_JP', 'ko_KR', 'zh_CN', 'ru_RU']
+const SUPPORTED_LANGUAGES = [
+  'en_US',
+  'en_AU',
+  'en_GB',
+  'en_PH',
+  'en_SG',
+  'vi_VN',
+  'es_AR',
+  'es_ES',
+  'es_MX',
+  'ja_JP',
+  'ko_KR',
+  'zh_CN',
+  'ru_RU',
+  'ar_AE',
+  'pt_BR',
+  'id_ID',
+  'th_TH',
+  'zh_MY',
+  'zh_TW',
+  'cs_CZ',
+  'de_DE',
+  'el_GR',
+  'fr_FR',
+  'hu_HU',
+  'it_IT',
+  'pl_PL',
+  'ro_RO',
+  'tr_TR'
+]
 const DDRAGON_BASE_URL = 'https://ddragon.leagueoflegends.com'
 const CDRAGON_BASE_URL =
   'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1'
@@ -24,12 +54,23 @@ const CDRAGON_BASE_URL =
 const CONCURRENT_REQUESTS = 10 // Increased from sequential to 10 concurrent
 const RETRY_ATTEMPTS = 3
 const RETRY_DELAY = 1000
+const OPGG_CONCURRENT_REQUESTS = 3 // Be respectful to OP.GG
+const OPGG_REQUEST_DELAY = 1000 // Delay between OP.GG requests
 
 interface Chroma {
   id: number
   name: string
   chromaPath: string
   colors: string[]
+}
+
+interface SkinVariant {
+  id: string
+  name: string
+  displayName?: string
+  githubUrl: string
+  downloadUrl?: string
+  imageUrl?: string
 }
 
 interface Skin {
@@ -40,12 +81,19 @@ interface Skin {
   lolSkinsName?: string
   chromas: boolean
   chromaList?: Chroma[]
+  variants?: {
+    type: string // "exalted", "form", etc.
+    items: SkinVariant[]
+  }
   rarity: string
   rarityGemPath: string | null
   isLegacy: boolean
   skinType: string
   skinLines?: Array<{ id: number }>
   description?: string
+  winRate?: number
+  pickRate?: number
+  totalGames?: number
 }
 
 interface Champion {
@@ -76,6 +124,26 @@ interface ProgressTracker {
   completed: number
   startTime: number
   currentPhase: string
+}
+
+interface SkinWinRate {
+  skinName: string
+  winRate: number
+  pickRate: number
+  totalGames: number
+}
+
+interface SkinWinRateMapping {
+  championKey: string
+  championId: number
+  skinId: string // e.g., "266_1"
+  skinNum: number
+  opggName: string
+  matchedName: string
+  winRate: number
+  pickRate: number
+  totalGames: number
+  confidence: number // 0-1, how confident we are in the match
 }
 
 // CDragon response types
@@ -244,6 +312,204 @@ const progress: ProgressTracker = {
   currentPhase: 'Initializing'
 }
 
+// Manual mapping for special skin variants that exist in subdirectories
+const SPECIAL_SKIN_VARIANTS: Record<
+  string,
+  Record<string, { type: string; items: SkinVariant[] }>
+> = {
+  Jinx: {
+    'Arcane Fractured Jinx': {
+      type: 'exalted',
+      items: [
+        {
+          id: 'arcane_fractured_hero',
+          name: 'Hero',
+          displayName: 'Arcane Fractured Jinx — Hero',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Jinx/Exalted/Arcane%20Fractured%20Jinx%20%E2%80%94%20Hero.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Jinx/Exalted/Arcane%20Fractured%20Jinx%20%E2%80%94%20Hero.zip'
+        },
+        {
+          id: 'arcane_fractured_menace',
+          name: 'Menace',
+          displayName: 'Arcane Fractured Jinx — Menace',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Jinx/Exalted/Arcane%20Fractured%20Jinx%20%E2%80%94%20Menace.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Jinx/Exalted/Arcane%20Fractured%20Jinx%20%E2%80%94%20Menace.zip'
+        },
+        {
+          id: 'arcane_fractured_powder',
+          name: 'Powder',
+          displayName: 'Arcane Fractured Jinx — Powder',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Jinx/Exalted/Arcane%20Fractured%20Jinx%20%E2%80%94%20Powder.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Jinx/Exalted/Arcane%20Fractured%20Jinx%20%E2%80%94%20Powder.zip'
+        }
+      ]
+    }
+  },
+  Lux: {
+    'Elementalist Lux': {
+      type: 'form',
+      items: [
+        {
+          id: 'elementalist_air',
+          name: 'Air',
+          displayName: 'Lux Elementalist Air',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Air.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Air.zip'
+        },
+        {
+          id: 'elementalist_dark',
+          name: 'Dark',
+          displayName: 'Lux Elementalist Dark',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Dark.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Dark.zip'
+        },
+        {
+          id: 'elementalist_fire',
+          name: 'Fire',
+          displayName: 'Lux Elementalist Fire',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Fire.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Fire.zip'
+        },
+        {
+          id: 'elementalist_ice',
+          name: 'Ice',
+          displayName: 'Lux Elementalist Ice',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Ice.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Ice.zip'
+        },
+        {
+          id: 'elementalist_magma',
+          name: 'Magma',
+          displayName: 'Lux Elementalist Magma',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Magma.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Magma.zip'
+        },
+        {
+          id: 'elementalist_mystic',
+          name: 'Mystic',
+          displayName: 'Lux Elementalist Mystic',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Mystic.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Mystic.zip'
+        },
+        {
+          id: 'elementalist_nature',
+          name: 'Nature',
+          displayName: 'Lux Elementalist Nature',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Nature.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Nature.zip'
+        },
+        {
+          id: 'elementalist_storm',
+          name: 'Storm',
+          displayName: 'Lux Elementalist Storm',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Storm.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Storm.zip'
+        },
+        {
+          id: 'elementalist_water',
+          name: 'Water',
+          displayName: 'Lux Elementalist Water',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Water.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Lux/forms/Elementalist%20Lux/Lux%20Elementalist%20Water.zip'
+        }
+      ]
+    }
+  },
+  MissFortune: {
+    'Gun Goddess Miss Fortune': {
+      type: 'form',
+      items: [
+        {
+          id: 'gun_goddess_form2',
+          name: 'Form 2',
+          displayName: 'GunGoddess MF form 2',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/GunGoddess%20MF%20form%202.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/GunGoddess%20MF%20form%202.zip',
+          imageUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/Model%20Image/form_2.png'
+        },
+        {
+          id: 'gun_goddess_form3',
+          name: 'Form 3',
+          displayName: 'GunGoddess MF form 3',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/GunGoddess%20MF%20form%203.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/GunGoddess%20MF%20form%203.zip',
+          imageUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/Model%20Image/form_3.png'
+        },
+        {
+          id: 'gun_goddess_form4',
+          name: 'Form 4',
+          displayName: 'GunGoddess MF form 4',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/GunGoddess%20MF%20form%204.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/GunGoddess%20MF%20form%204.zip',
+          imageUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Miss%20Fortune/Gun%20Goddess%20Miss%20Fortune%20forms/Model%20Image/form_4.png'
+        }
+      ]
+    }
+  },
+  Sona: {
+    'DJ Sona': {
+      type: 'form',
+      items: [
+        {
+          id: 'dj_sona_2nd_form',
+          name: '2nd Form',
+          displayName: 'DJ Sona 2nd form',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Sona/DJ%20Sona%20form/DJ%20Sona%202nd%20form.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Sona/DJ%20Sona%20form/DJ%20Sona%202nd%20form.zip',
+          imageUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Sona/DJ%20Sona%20form/Preview%20Image/DJ%20Sona%202nd%20form.png'
+        },
+        {
+          id: 'dj_sona_3rd_form',
+          name: '3rd Form',
+          displayName: 'DJ Sona 3rd form',
+          githubUrl:
+            'https://github.com/darkseal-org/lol-skins/blob/main/skins/Sona/DJ%20Sona%20form/DJ%20Sona%203nd%20form.zip',
+          downloadUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Sona/DJ%20Sona%20form/DJ%20Sona%203nd%20form.zip',
+          imageUrl:
+            'https://raw.githubusercontent.com/darkseal-org/lol-skins/main/skins/Sona/DJ%20Sona%20form/Preview%20Image/DJ%20Sona%203nd%20form.png'
+        }
+      ]
+    }
+  }
+}
+
 function updateProgress(phase: string, completed?: number, total?: number) {
   progress.currentPhase = phase
   if (completed !== undefined) progress.completed = completed
@@ -353,6 +619,48 @@ function buildChampionNameLookup(championFolders: string[]): Map<string, string>
   return lookup
 }
 
+// Utility functions for skin name matching
+function levenshteinDistance(str1: string, str2: string): number {
+  const m = str1.length
+  const n = str2.length
+  const dp: number[][] = Array(m + 1)
+    .fill(null)
+    .map(() => Array(n + 1).fill(0))
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1]
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+      }
+    }
+  }
+
+  return dp[m][n]
+}
+
+function calculateSimilarity(str1: string, str2: string): number {
+  const maxLen = Math.max(str1.length, str2.length)
+  if (maxLen === 0) return 1
+  const distance = levenshteinDistance(str1, str2)
+  return 1 - distance / maxLen
+}
+
+function normalizeSkinName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/['']/g, '') // Remove apostrophes
+    .replace(/\s+/g, '') // Remove spaces
+    .replace(/\./g, '') // Remove dots
+    .replace(/-/g, '') // Remove hyphens
+    .replace(/[()]/g, '') // Remove parentheses
+    .replace(/:/g, '') // Remove colons
+}
+
 function processTieredSkin(skin: CDragonSkin, championId: number, lolSkinsList: any[]): Skin[] {
   const tiers = skin.questSkinInfo?.tiers
   if (!tiers || tiers.length === 0) {
@@ -393,7 +701,8 @@ async function fetchChampionDetail(
   version: string,
   language: string,
   lolSkinsData: Map<string, any[]>,
-  championNameLookup: Map<string, string>
+  championNameLookup: Map<string, string>,
+  englishSkinNames?: Map<string, string> // Map of skinId to English name
 ): Promise<{ champion: Champion; chromaData: Record<string, Chroma[]> }> {
   const championId = parseInt(championBasic.key)
   const locale = normalizeLocale(language)
@@ -458,6 +767,13 @@ async function fetchChampionDetail(
         chromaData[skinId] = chromaList
       }
 
+      // Check for special skin variants
+      const championKey = detailData.alias
+      // For non-English languages, use English name if available
+      const englishName = englishSkinNames?.get(skinId)
+      const variantLookupName = englishName || skinName
+      const variants = SPECIAL_SKIN_VARIANTS[championKey]?.[variantLookupName]
+
       return {
         id: skinId,
         num: skinNum,
@@ -466,6 +782,7 @@ async function fetchChampionDetail(
           match && match.skinInfo.skinName !== skinName ? match.skinInfo.skinName : undefined,
         chromas: !!(skin.chromas && skin.chromas.length > 0),
         chromaList: chromaList,
+        variants: variants,
         rarity: skin.rarity || 'kNoRarity',
         rarityGemPath: getRarityGemPath(skin.rarity || 'kNoRarity'),
         isLegacy: skin.isLegacy || false,
@@ -552,6 +869,13 @@ async function fetchChampionDetail(
           chromaData[skinId] = chromaList
         }
 
+        // Check for special skin variants
+        const championKey = detailData.alias
+        // For non-English languages, use English name if available
+        const englishName = englishSkinNames?.get(skinId)
+        const variantLookupName = englishName || skinName
+        const variants = SPECIAL_SKIN_VARIANTS[championKey]?.[variantLookupName]
+
         return {
           id: skinId,
           num: skinNum,
@@ -560,6 +884,7 @@ async function fetchChampionDetail(
             match && match.skinInfo.skinName !== skinName ? match.skinInfo.skinName : undefined,
           chromas: !!(skin.chromas && skin.chromas.length > 0),
           chromaList: chromaList,
+          variants: variants,
           rarity: skin.rarity || 'kNoRarity',
           rarityGemPath: getRarityGemPath(skin.rarity || 'kNoRarity'),
           isLegacy: skin.isLegacy || false,
@@ -590,7 +915,8 @@ async function fetchAllChampionData(
   version: string,
   language: string,
   lolSkinsData: Map<string, any[]>,
-  championFolders: string[]
+  championFolders: string[],
+  englishSkinNames?: Map<string, string>
 ): Promise<{ champions: Champion[]; allChromaData: Record<string, Chroma[]> }> {
   console.log(`Fetching champion data for ${language}...`)
 
@@ -622,7 +948,8 @@ async function fetchAllChampionData(
             version,
             language,
             lolSkinsData,
-            championNameLookup
+            championNameLookup,
+            englishSkinNames
           )
 
           updateProgress('Fetching Champions', index + 1, championKeys.length)
@@ -681,6 +1008,165 @@ async function loadExistingData(
   await Promise.all(loadPromises)
 
   return existingData
+}
+
+async function scrapeChampionSkinStats(championKey: string): Promise<SkinWinRate[]> {
+  try {
+    // Convert champion key to lowercase for OP.GG URL
+    const urlChampion = championKey.toLowerCase()
+    const url = `https://op.gg/lol/skins/statistics/${urlChampion}`
+
+    // Add delay to be respectful
+    await delay(OPGG_REQUEST_DELAY)
+
+    // Fetch the HTML
+    const response = await retryRequest(() =>
+      axios.get(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9'
+        },
+        timeout: 10000
+      })
+    )
+
+    // Load HTML into Cheerio
+    const $ = cheerio.load(response.data)
+
+    // Find the skin statistics table
+    const skinStats: SkinWinRate[] = []
+
+    // Parse all rows
+    $('tbody tr').each((index, element) => {
+      const $row = $(element)
+      const cells = $row
+        .find('td')
+        .map((_, el) => $(el).text().trim())
+        .get()
+
+      if (cells.length >= 6) {
+        const skinName = cells[1]
+        const gamesPlayed = cells[3].replace(/,/g, '')
+        const winRateText = cells[4]
+        const pickRateText = cells[5]
+
+        // Skip header row
+        if (skinName === 'Champion') return
+
+        // Parse percentages and numbers
+        const winRate = parseFloat(winRateText.replace('%', ''))
+        const pickRate = parseFloat(pickRateText.replace('%', ''))
+        const totalGames = parseInt(gamesPlayed)
+
+        if (skinName && !isNaN(winRate)) {
+          skinStats.push({
+            skinName,
+            winRate,
+            pickRate: isNaN(pickRate) ? 0 : pickRate,
+            totalGames: isNaN(totalGames) ? 0 : totalGames
+          })
+        }
+      }
+    })
+
+    return skinStats
+  } catch (error) {
+    console.error(`Failed to scrape skin stats for ${championKey}:`, error.message)
+    // Return empty array on error to continue with other champions
+    return []
+  }
+}
+
+function findBestOPGGSkinMatch(
+  opggSkinName: string,
+  championSkins: Array<{ id: string; num: number; name: string; nameEn?: string }>
+): { skin: { id: string; num: number; name: string; nameEn?: string }; confidence: number } | null {
+  const normalizedOpggName = normalizeSkinName(opggSkinName)
+  let bestMatch: {
+    skin: { id: string; num: number; name: string; nameEn?: string }
+    confidence: number
+  } | null = null
+  let bestScore = 0
+
+  for (const skin of championSkins) {
+    // Skip base skin (num: 0) unless OP.GG name is just the champion name
+    if (skin.num === 0 && !opggSkinName.match(/^[A-Z][a-z]+$/)) continue
+
+    // Try matching with English name first, then regular name
+    const namesToTry = [skin.nameEn, skin.name].filter(Boolean)
+
+    for (const name of namesToTry) {
+      const normalizedName = normalizeSkinName(name!)
+      const score = calculateSimilarity(normalizedOpggName, normalizedName)
+
+      if (score > bestScore) {
+        bestScore = score
+        bestMatch = { skin, confidence: score }
+      }
+
+      // If we found an exact match, no need to continue
+      if (score === 1) break
+    }
+  }
+
+  // Only return matches with reasonable confidence (> 0.7)
+  return bestMatch && bestMatch.confidence > 0.7 ? bestMatch : null
+}
+
+async function fetchAllSkinWinRates(
+  champions: Champion[]
+): Promise<Map<string, SkinWinRateMapping>> {
+  console.log('\nFetching skin win rates from OP.GG...')
+
+  // Create limit function for concurrent requests
+  const limit = pLimit(OPGG_CONCURRENT_REQUESTS)
+
+  // Store all mappings
+  const allMappings: SkinWinRateMapping[] = []
+  let processedChampions = 0
+
+  updateProgress('Fetching Win Rates', 0, champions.length)
+
+  // Process champions
+  await Promise.all(
+    champions.map((champion) =>
+      limit(async () => {
+        const winRates = await scrapeChampionSkinStats(champion.key)
+        processedChampions++
+        updateProgress('Fetching Win Rates', processedChampions, champions.length)
+
+        if (winRates.length === 0) {
+          return
+        }
+
+        // Match OP.GG skins to our skin data
+        for (const opggSkin of winRates) {
+          const match = findBestOPGGSkinMatch(opggSkin.skinName, champion.skins)
+
+          if (match) {
+            allMappings.push({
+              championKey: champion.key,
+              championId: champion.id,
+              skinId: match.skin.id,
+              skinNum: match.skin.num,
+              opggName: opggSkin.skinName,
+              matchedName: match.skin.nameEn || match.skin.name,
+              winRate: opggSkin.winRate,
+              pickRate: opggSkin.pickRate,
+              totalGames: opggSkin.totalGames,
+              confidence: match.confidence
+            })
+          }
+        }
+      })
+    )
+  )
+
+  console.log(`Fetched win rate data for ${allMappings.length} skins`)
+
+  // Create a map for quick lookup
+  return new Map(allMappings.map((m) => [m.skinId, m]))
 }
 
 async function saveAllData(
@@ -751,8 +1237,12 @@ async function main() {
 
     // Parse command line arguments
     const forceRefresh = process.argv.includes('--force')
+    const skipWinRates = process.argv.includes('--skip-winrates')
     if (forceRefresh) {
       console.log('Force refresh enabled - will fetch all data regardless of version')
+    }
+    if (skipWinRates) {
+      console.log('Skipping win rate fetching')
     }
 
     // Create data directory
@@ -807,6 +1297,44 @@ async function main() {
       const allData: Record<string, ChampionData> = { ...existingData }
       const allChromaData: Record<string, Chroma[]> = {}
 
+      // Build English skin names map for variant matching
+      let englishSkinNames: Map<string, string> | undefined
+
+      // Ensure English is fetched first
+      if (!allData['en_US']) {
+        updateProgress(`Fetching en_US data`)
+        const { champions, allChromaData: chromaData } = await fetchAllChampionData(
+          version,
+          'en_US',
+          lolSkinsData,
+          championFolders
+        )
+
+        // Build English skin names map
+        englishSkinNames = new Map()
+        champions.forEach((champion) => {
+          champion.skins.forEach((skin) => {
+            englishSkinNames!.set(skin.id, skin.name)
+          })
+        })
+
+        Object.assign(allChromaData, chromaData)
+        allData['en_US'] = {
+          version,
+          lastUpdated: new Date().toISOString(),
+          champions
+        }
+      } else {
+        // If English data already exists, build the map from it
+        englishSkinNames = new Map()
+        allData['en_US'].champions.forEach((champion) => {
+          champion.skins.forEach((skin) => {
+            englishSkinNames!.set(skin.id, skin.name)
+          })
+        })
+      }
+
+      // Fetch other languages
       for (const language of SUPPORTED_LANGUAGES) {
         if (allData[language]) continue // Skip if already loaded
 
@@ -815,7 +1343,8 @@ async function main() {
           version,
           language,
           lolSkinsData,
-          championFolders
+          championFolders,
+          englishSkinNames
         )
 
         // Merge chroma data
@@ -845,6 +1374,26 @@ async function main() {
           version,
           lastUpdated: new Date().toISOString(),
           champions
+        }
+      }
+
+      // Fetch win rates from OP.GG using English champion data
+      if (!skipWinRates) {
+        updateProgress('Fetching win rate data')
+        const winRateMap = await fetchAllSkinWinRates(allData['en_US'].champions)
+
+        // Merge win rates into all language data
+        for (const languageData of Object.values(allData)) {
+          languageData.champions.forEach((champion) => {
+            champion.skins.forEach((skin) => {
+              const winRateInfo = winRateMap.get(skin.id)
+              if (winRateInfo) {
+                skin.winRate = winRateInfo.winRate
+                skin.pickRate = winRateInfo.pickRate
+                skin.totalGames = winRateInfo.totalGames
+              }
+            })
+          })
         }
       }
 

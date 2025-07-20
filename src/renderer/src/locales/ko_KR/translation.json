@@ -89,12 +89,44 @@
     "downloading": "도구 다운로드 중... {{progress}}%",
     "downloadTools": "도구 다운로드"
   },
+  "downloadAll": {
+    "title": "Download All Skins",
+    "button": "Download All",
+    "optionsTitle": "Download All Skins",
+    "optionsDescription": "Choose which skins to download and configure download settings.",
+    "infoTitle": "Download Information",
+    "infoDescription": "Approximately {{count}} skins will be downloaded (~{{size}}).",
+    "filterOptions": "Filter Options",
+    "excludeChromas": "Exclude Chromas",
+    "excludeChromasDesc": "Skip chroma variants to reduce download size",
+    "excludeVariants": "Exclude Variants",
+    "excludeVariantsDesc": "Skip prestige editions and special variants",
+    "excludeLegacy": "Exclude Legacy Skins",
+    "excludeLegacyDesc": "Skip legacy and limited-time skins",
+    "excludeEsports": "Exclude Esports Skins",
+    "excludeEsportsDesc": "Skip championship and professional team skins",
+    "onlyFavorites": "Only Favorites",
+    "onlyFavoritesDesc": "Download only your favorited skins",
+    "performanceOptions": "Performance Options",
+    "concurrency": "Concurrent Downloads",
+    "concurrencyDesc": "Number of simultaneous downloads (higher = faster but more resource intensive)",
+    "startDownload": "Start Download",
+    "progress": "{{completed}} of {{total}} skins",
+    "speed": "Speed",
+    "timeRemaining": "Time remaining",
+    "failedDownloads": "{{count}} failed downloads",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "completed": "Download Complete"
+  },
   "settings": {
     "gamePath": "게임 경로",
     "language": "언어",
     "theme": "테마",
     "notifications": "알림",
     "tabs": {
+      "general": "일반",
       "leagueClient": "리그 클라이언트",
       "skinManagement": "스킨 관리"
     },
@@ -102,6 +134,18 @@
       "title": "무작위 스킨 선택",
       "none": "비활성화"
     },
+    "minimizeToTray": {
+      "title": "트레이로 최소화",
+      "description": "닫기 버튼을 클릭할 때 앱을 닫는 대신 시스템 트레이로 숨기기"
+    }
+  },
+  "settings": {
+    "title": "설정",
+    "description": "앱 설정 구성",
+    "gamePath": "게임 경로",
+    "language": "언어",
+    "theme": "테마",
+    "notifications": "알림",
     "leagueClient": {
       "title": "리그 클라이언트 통합",
       "description": "리그 오브 레전드 클라이언트와 연결되는 기능 활성화"
@@ -158,6 +202,22 @@
       "title": "자동 랜덤 즐겨찾기 스킨",
       "description": "챔피언이 감지될 때 즐겨찾기에서 랜덤 스킨을 자동으로 선택"
     },
+    "autoRandomHighestWinRateSkin": {
+      "title": "자동 랜덤 높은 승률 스킨",
+      "description": "승률이 높은 상위 3개 스킨 중에서 무작위로 선택합니다"
+    },
+    "autoRandomHighestPickRateSkin": {
+      "title": "자동 랜덤 높은 픽률 스킨",
+      "description": "가장 인기 있는 상위 3개 스킨 중에서 무작위로 선택합니다"
+    },
+    "autoRandomMostPlayedSkin": {
+      "title": "자동 랜덤 최다 플레이 스킨",
+      "description": "가장 많이 플레이된 상위 3개 스킨 중에서 무작위로 선택합니다"
+    },
+    "inGameOverlay": {
+      "title": "인게임 오버레이",
+      "description": "빠른 스킨 알림을 위해 리그 클라이언트에 오버레이 미리 연결 (자동 랜덤 기능 필요)"
+    },
     "allowMultipleSkinsPerChampion": {
       "title": "챔피언당 여러 스킨 허용",
       "description": "활성화하면 동일한 챔피언에 여러 스킨을 동시에 사용할 수 있습니다"
@@ -166,6 +226,13 @@
       "title": "가져오기 시 모드 문제 자동 해결",
       "description": "모드를 가져올 때 누락된 체력바, 재료, VFX 효과를 자동으로 수정합니다"
     }
+  },
+  "tray": {
+    "show": "Chommicha 보이기",
+    "hide": "Chommicha 숨기기",
+    "language": "언어",
+    "openSettings": "설정 열기",
+    "quit": "Chommicha 종료"
   },
   "errors": {
     "generic": "오류가 발생했습니다",
@@ -221,12 +288,16 @@
     "fixError": "모드를 수정하는 중 오류가 발생했습니다",
     "saveChanges": "변경사항 저장"
   },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
   "cancel": "취소",
   "success": "성공",
   "error": "오류",
   "update": {
     "available": "업데이트 사용 가능",
-    "description": "chommicha의 새 버전을 다운로드할 수 있습니다.",
+    "description": "Chommicha의 새 버전을 다운로드할 수 있습니다.",
     "whatsNew": "새로운 기능",
     "downloading": "다운로드 중...",
     "updateNow": "지금 업데이트",
@@ -254,6 +325,10 @@
     "selectChroma": "{{skinName}}의 크로마 선택",
     "chooseChroma_one": "{{count}}개의 사용 가능한 크로마 중에서 선택",
     "chooseChroma_other": "{{count}}개의 사용 가능한 크로마 중에서 선택",
+    "selectVariant": "{{skinName}}의 변형 선택",
+    "chooseVariant": "{{count}}개의 사용 가능한 {{type}} 중에서 선택",
+    "exaltedVariant": "승천 변형",
+    "formVariant": "폼 변형",
     "mySkins": "내 스킨",
     "roomSkins": "룸 스킨",
     "manage": "관리",
@@ -279,6 +354,14 @@
     "skinNumAsc": "스킨 번호 (오름차순)",
     "skinNumDesc": "스킨 번호 (내림차순)",
     "championName": "챔피언 이름",
+    "rarityAsc": "희귀도 (낮음→높음)",
+    "rarityDesc": "희귀도 (높음→낮음)",
+    "winRateDesc": "승률 (높음→낮음)",
+    "winRateAsc": "승률 (낮음→높음)",
+    "pickRateDesc": "픽률 (높음→낮음)",
+    "pickRateAsc": "픽률 (낮음→높음)",
+    "totalGamesDesc": "플레이 횟수 (많음→적음)",
+    "totalGamesAsc": "플레이 횟수 (적음→많음)",
     "rarity": "희귀도",
     "rarities": {
       "epic": "서사급",

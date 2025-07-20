@@ -49,9 +49,9 @@ export function TitleBar({ appVersion }: TitleBarProps) {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex items-center gap-2">
-          <img src={logoImg} alt="chommicha" className="w-5 h-5 object-contain" />
+          <img src={logoImg} alt="Chommicha" className="w-5 h-5 object-contain" />
           <div className="flex items-baseline gap-2">
-            <div className="text-sm font-bold text-text-primary tracking-wide">chommicha</div>
+            <div className="text-sm font-bold text-text-primary tracking-wide">Chommicha</div>
             {appVersion && <div className="text-xs text-text-muted">v{appVersion}</div>}
           </div>
         </div>
@@ -65,12 +65,11 @@ export function TitleBar({ appVersion }: TitleBarProps) {
 
         {/* Social Links */}
         <div className="flex items-center gap-1 ml-2">
-
           <Button
             variant="ghost"
             size="icon"
             className="w-8 h-8 rounded"
-            onClick={() => handleOpenExternal('https://www.youtube.com/watch?v=xvFZjo5PgG0
+            onClick={() => handleOpenExternal('https://pornhub.com')}
             aria-label={t('social.joinDiscord')}
             title={t('social.joinDiscord')}
           >
@@ -86,7 +85,7 @@ export function TitleBar({ appVersion }: TitleBarProps) {
             variant="ghost"
             size="icon"
             className="w-8 h-8 rounded"
-            onClick={() => handleOpenExternal('https://github.com/hoangvu12/chommicha')}
+            onClick={() => handleOpenExternal('https://zeb.com/Chommicha')}
             aria-label={t('social.viewGithub')}
             title={t('social.viewGithub')}
           >

@@ -24,6 +24,7 @@ import { P2PProvider } from './contexts/P2PContext'
 
 // Utils
 import { getChampionDisplayName } from './utils/championUtils'
+import { generateSkinFilename } from '../../shared/utils/skinFilename'
 
 // Hooks
 import { useGameDetection } from './hooks/useGameDetection'
@@ -70,12 +71,26 @@ export interface Skin {
     chromaPath: string
     colors: string[]
   }>
+  variants?: {
+    type: string // "exalted", "form", etc.
+    items: Array<{
+      id: string
+      name: string
+      displayName?: string
+      githubUrl: string
+      downloadUrl?: string
+      imageUrl?: string
+    }>
+  }
   rarity: string
   rarityGemPath: string | null
   isLegacy: boolean
   skinType: string
   skinLines?: Array<{ id: number }>
   description?: string
+  winRate?: number
+  pickRate?: number
+  totalGames?: number
 }
 
 function AppContent(): React.JSX.Element {
@@ -154,8 +169,20 @@ function AppContent(): React.JSX.Element {
       const autoRandomRaritySkinEnabled = await window.api.getSettings(
         'autoRandomRaritySkinEnabled'
       )
+      const autoRandomHighestWinRateSkinEnabled = await window.api.getSettings(
+        'autoRandomHighestWinRateSkinEnabled'
+      )
+      const autoRandomHighestPickRateSkinEnabled = await window.api.getSettings(
+        'autoRandomHighestPickRateSkinEnabled'
+      )
+      const autoRandomMostPlayedSkinEnabled = await window.api.getSettings(
+        'autoRandomMostPlayedSkinEnabled'
+      )
 
       let availableSkins = champion.skins.filter((skin) => skin.num !== 0)
+
+      const favoriteChromaOptions: Array<{ skin: Skin; chromaId?: string; chromaName?: string }> =
+        []
 
       if (autoRandomFavoriteSkinEnabled) {
         // Get favorites for this champion
@@ -174,22 +201,94 @@ function AppContent(): React.JSX.Element {
           return
         }
 
-        // Filter skins to only those that are favorited
-        // Convert both skinId (string) and skin.id (number) to strings for comparison
-        availableSkins = champion.skins.filter((skin) => {
-          const found = favoritesResult.favorites?.some((fav) => fav.skinId === String(skin.id))
-          console.log(
-            `[AutoFavorite] Checking skin ${skin.name} (id: ${skin.id}, type: ${typeof skin.id}) against favorites - found: ${found}`
-          )
-          return found || false
+        // Build list of favorited options (base skins and specific chromas)
+        favoritesResult.favorites.forEach((fav) => {
+          const skin = champion.skins.find((s) => String(s.id) === fav.skinId)
+          if (skin && skin.num !== 0) {
+            if (fav.chromaId) {
+              // This is a specific chroma favorite
+              favoriteChromaOptions.push({
+                skin,
+                chromaId: fav.chromaId,
+                chromaName: fav.chromaName
+              })
+            } else {
+              // This is a base skin favorite
+              favoriteChromaOptions.push({ skin })
+            }
+          }
         })
+
+        if (favoriteChromaOptions.length === 0) {
+          console.log(`[AutoFavorite] No valid favorite skins found`)
+          return
+        }
+
+        // For compatibility with existing code, we still need availableSkins
+        availableSkins = [...new Set(favoriteChromaOptions.map((opt) => opt.skin))]
+
         console.log(
-          `[AutoFavorite] Filtered available skins:`,
-          availableSkins.map((s) => ({ name: s.name, id: s.id }))
+          `[AutoFavorite] Found ${favoriteChromaOptions.length} favorite options (including chromas)`,
+          favoriteChromaOptions.map((opt) => ({ name: opt.skin.name, chromaId: opt.chromaId }))
         )
       } else if (autoRandomRaritySkinEnabled) {
         // Filter to only rarity skins
         availableSkins = availableSkins.filter((skin) => skin.rarity && skin.rarity !== 'kNoRarity')
+      } else if (autoRandomHighestWinRateSkinEnabled) {
+        // Filter to skins with win rate data and sort by highest win rate
+        console.log(
+          `[AutoSelect] Checking skins for win rate selection:`,
+          availableSkins.map((s) => ({ name: s.name, winRate: s.winRate }))
+        )
+        const skinsWithWinRate = availableSkins.filter((skin) => skin.winRate && skin.winRate > 0)
+        console.log(`[AutoSelect] Found ${skinsWithWinRate.length} skins with win rate data`)
+        if (skinsWithWinRate.length > 0) {
+          // Sort by win rate descending and take top 3
+          skinsWithWinRate.sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
+          availableSkins = skinsWithWinRate.slice(0, 3)
+          console.log(
+            `[AutoSelect] Top 3 by win rate:`,
+            availableSkins.map((s) => ({ name: s.name, winRate: s.winRate }))
+          )
+        }
+      } else if (autoRandomHighestPickRateSkinEnabled) {
+        // Filter to skins with pick rate data and sort by highest pick rate
+        console.log(
+          `[AutoSelect] Checking skins for pick rate selection:`,
+          availableSkins.map((s) => ({ name: s.name, pickRate: s.pickRate }))
+        )
+        const skinsWithPickRate = availableSkins.filter(
+          (skin) => skin.pickRate && skin.pickRate > 0
+        )
+        console.log(`[AutoSelect] Found ${skinsWithPickRate.length} skins with pick rate data`)
+        if (skinsWithPickRate.length > 0) {
+          // Sort by pick rate descending and take top 3
+          skinsWithPickRate.sort((a, b) => (b.pickRate || 0) - (a.pickRate || 0))
+          availableSkins = skinsWithPickRate.slice(0, 3)
+          console.log(
+            `[AutoSelect] Top 3 by pick rate:`,
+            availableSkins.map((s) => ({ name: s.name, pickRate: s.pickRate }))
+          )
+        }
+      } else if (autoRandomMostPlayedSkinEnabled) {
+        // Filter to skins with total games data and sort by most played
+        console.log(
+          `[AutoSelect] Checking skins for most played selection:`,
+          availableSkins.map((s) => ({ name: s.name, totalGames: s.totalGames }))
+        )
+        const skinsWithGames = availableSkins.filter(
+          (skin) => skin.totalGames && skin.totalGames > 0
+        )
+        console.log(`[AutoSelect] Found ${skinsWithGames.length} skins with total games data`)
+        if (skinsWithGames.length > 0) {
+          // Sort by total games descending and take top 3
+          skinsWithGames.sort((a, b) => (b.totalGames || 0) - (a.totalGames || 0))
+          availableSkins = skinsWithGames.slice(0, 3)
+          console.log(
+            `[AutoSelect] Top 3 by total games:`,
+            availableSkins.map((s) => ({ name: s.name, totalGames: s.totalGames }))
+          )
+        }
       }
 
       if (availableSkins.length === 0) {
@@ -197,13 +296,30 @@ function AppContent(): React.JSX.Element {
         return
       }
 
-      // Select a random skin
-      const randomIndex = Math.floor(Math.random() * availableSkins.length)
-      const randomSkin = availableSkins[randomIndex]
-      console.log(`[AutoFavorite] Selected random skin:`, {
-        name: randomSkin.name,
-        id: randomSkin.id
-      })
+      // Select a random skin or chroma
+      let randomSkin: Skin
+      let selectedChromaId: string | undefined
+
+      if (autoRandomFavoriteSkinEnabled && favoriteChromaOptions.length > 0) {
+        // Select from favorite options (which may include specific chromas)
+        const randomOption =
+          favoriteChromaOptions[Math.floor(Math.random() * favoriteChromaOptions.length)]
+        randomSkin = randomOption.skin
+        selectedChromaId = randomOption.chromaId
+        console.log(`[AutoFavorite] Selected random favorite:`, {
+          name: randomSkin.name,
+          id: randomSkin.id,
+          chromaId: selectedChromaId
+        })
+      } else {
+        // Select from filtered skins (non-favorite modes)
+        const randomIndex = Math.floor(Math.random() * availableSkins.length)
+        randomSkin = availableSkins[randomIndex]
+        console.log(`[AutoFavorite] Selected random skin:`, {
+          name: randomSkin.name,
+          id: randomSkin.id
+        })
+      }
 
       // Add the auto-selected skin
       const newSelectedSkin = {
@@ -214,7 +330,7 @@ function AppContent(): React.JSX.Element {
         skinNameEn: randomSkin.nameEn,
         lolSkinsName: randomSkin.lolSkinsName,
         skinNum: randomSkin.num,
-        chromaId: undefined,
+        chromaId: selectedChromaId,
         isDownloaded: false,
         isAutoSelected: true
       }
@@ -222,6 +338,11 @@ function AppContent(): React.JSX.Element {
 
       // Send the auto-selected skin to main process for overlay display
       try {
+        console.log(`[AutoSelect] Sending skin to overlay:`, {
+          championKey: champion.key,
+          skinName: randomSkin.name,
+          skinNum: randomSkin.num
+        })
         await window.api.setOverlayAutoSelectedSkin({
           championKey: champion.key,
           championName: champion.name,
@@ -230,6 +351,7 @@ function AppContent(): React.JSX.Element {
           skinNum: randomSkin.num,
           rarity: randomSkin.rarity
         })
+        console.log(`[AutoSelect] Successfully sent skin to overlay`)
       } catch (error) {
         console.error('[AutoSelect] Failed to send auto-selected skin to main process:', error)
       }
@@ -262,12 +384,7 @@ function AppContent(): React.JSX.Element {
       })
 
       // Pre-download the auto-selected skin in the background
-      const downloadName = (
-        randomSkin.lolSkinsName ||
-        randomSkin.nameEn ||
-        randomSkin.name
-      ).replace(/:/g, '')
-      const skinFileName = `${downloadName}.zip`
+      const skinFileName = generateSkinFilename(randomSkin)
       const championNameForUrl = getChampionDisplayName(champion)
       const githubUrl = `https://github.com/darkseal-org/lol-skins/blob/main/skins/${championNameForUrl}/${encodeURIComponent(
         skinFileName
@@ -380,7 +497,7 @@ function AppContent(): React.JSX.Element {
 
   // Handle skin click
   const handleSkinClick = useCallback(
-    (champion: Champion, skin: Skin, chromaId?: string) => {
+    (champion: Champion, skin: Skin, chromaId?: string, variantId?: string) => {
       if (!gamePath) {
         setStatusMessage(t('status.pleaseSetGamePath'))
         return
@@ -391,7 +508,8 @@ function AppContent(): React.JSX.Element {
         return (
           s.championKey === champion.key &&
           s.skinId === skin.id &&
-          s.chromaId === (chromaId || undefined)
+          s.chromaId === (chromaId || undefined) &&
+          s.variantId === (variantId || undefined)
         )
       })
 
@@ -409,6 +527,7 @@ function AppContent(): React.JSX.Element {
           lolSkinsName: skin.lolSkinsName,
           skinNum: skin.num,
           chromaId: chromaId,
+          variantId: variantId,
           isDownloaded: false,
           isAutoSelected: false
         }

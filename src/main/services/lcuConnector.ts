@@ -180,9 +180,26 @@ export class LCUConnector extends EventEmitter {
     }
   }
 
+  async getGameflowSession(): Promise<any> {
+    try {
+      const session = await this.request('GET', '/lol-gameflow/v1/session')
+      return session
+    } catch {
+      return null
+    }
+  }
+
   async getChampSelectSession(): Promise<any> {
     try {
       return await this.request('GET', '/lol-champ-select/v1/session')
+    } catch {
+      return null
+    }
+  }
+
+  async getLobbySession(): Promise<any> {
+    try {
+      return await this.request('GET', '/lol-lobby/v2/lobby')
     } catch {
       return null
     }
@@ -369,6 +386,7 @@ export class LCUConnector extends EventEmitter {
             if (opcode === 8 && eventName) {
               // Log champion select events
               if (eventName.includes('lol-champ-select')) {
+                // Champion select event received
               }
 
               this.emit('event', eventName, eventData)
@@ -378,6 +396,8 @@ export class LCUConnector extends EventEmitter {
                 this.emit('gameflow-phase', eventData?.data)
               } else if (eventName === 'OnJsonApiEvent_lol-champ-select_v1_session') {
                 this.emit('champ-select-session', eventData?.data)
+              } else if (eventName === 'OnJsonApiEvent_lol-lobby_v2_lobby') {
+                this.emit('lobby-session', eventData?.data)
               }
             }
           }

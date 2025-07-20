@@ -13,6 +13,7 @@ import {
 } from '../store/atoms/game.atoms'
 import { selectedSkinsAtom } from '../store/atoms'
 import { getChampionDisplayName } from '../utils/championUtils'
+import { generateSkinFilename } from '../../../shared/utils/skinFilename'
 import type { Champion, Skin } from '../App'
 
 export function useSkinManagement() {
@@ -39,7 +40,16 @@ export function useSkinManagement() {
   const loadFavorites = useCallback(async () => {
     const result = await window.api.getFavorites()
     if (result.success && result.favorites) {
-      const favoriteKeys = new Set(result.favorites.map((f) => `${f.championKey}_${f.skinId}`))
+      const favoriteKeys = new Set(
+        result.favorites.map((f) => {
+          // Handle both old format (no chromaId) and new format
+          if (f.chromaId) {
+            return `${f.championKey}_${f.skinId}_${f.chromaId}`
+          }
+          // Old format favorites are treated as base skin favorites
+          return `${f.championKey}_${f.skinId}_base`
+        })
+      )
       setFavorites(favoriteKeys)
     }
   }, [setFavorites])
@@ -53,7 +63,8 @@ export function useSkinManagement() {
 
   const toggleFavorite = useCallback(
     async (champion: Champion, skin: Skin) => {
-      const key = `${champion.key}_${skin.id}`
+      // For base skin favorites, we use 'base' as the chromaId
+      const key = `${champion.key}_${skin.id}_base`
       const isFav = favorites.has(key)
 
       if (isFav) {
@@ -65,6 +76,26 @@ export function useSkinManagement() {
         })
       } else {
         await window.api.addFavorite(champion.key, skin.id, skin.name)
+        setFavorites((prev) => new Set(prev).add(key))
+      }
+    },
+    [favorites, setFavorites]
+  )
+
+  const toggleChromaFavorite = useCallback(
+    async (champion: Champion, skin: Skin, chromaId: string, chromaName: string) => {
+      const key = `${champion.key}_${skin.id}_${chromaId}`
+      const isFav = favorites.has(key)
+
+      if (isFav) {
+        await window.api.removeFavorite(champion.key, skin.id, chromaId)
+        setFavorites((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(key)
+          return newSet
+        })
+      } else {
+        await window.api.addFavorite(champion.key, skin.id, skin.name, chromaId, chromaName)
         setFavorites((prev) => new Set(prev).add(key))
       }
     },
@@ -207,14 +238,31 @@ export function useSkinManagement() {
         )
       }
 
+      console.log('[useSkinManagement] Processing skins to apply:', skinsToApply)
+
       // Download any skins that aren't downloaded yet
       for (const selectedSkin of skinsToApply) {
-        if (selectedSkin.championKey === 'Custom') {
-          const userMod = downloadedSkins.find(
-            (ds) => ds.skinName.includes('[User]') && ds.skinName.includes(selectedSkin.skinName)
-          )
-          if (userMod) {
-            skinKeys.push(`${userMod.championName}/${userMod.skinName}`)
+        // Handle custom mods (both old and new format)
+        if (
+          selectedSkin.championKey === 'Custom' ||
+          selectedSkin.skinId.startsWith('custom_[User] ')
+        ) {
+          if (selectedSkin.championKey === 'Custom') {
+            // Old format: Custom champion
+            const userMod = downloadedSkins.find(
+              (ds) => ds.skinName.includes('[User]') && ds.skinName.includes(selectedSkin.skinName)
+            )
+            if (userMod) {
+              skinKeys.push(`${userMod.championName}/${userMod.skinName}`)
+            }
+          } else {
+            // New format: Custom mod with champion assigned
+            // Extract the filename from skinId after "custom_"
+            const modFileName = selectedSkin.skinId.replace('custom_', '')
+            console.log(
+              `[useSkinManagement] Adding custom mod: ${selectedSkin.championKey}/${modFileName}`
+            )
+            skinKeys.push(`${selectedSkin.championKey}/${modFileName}`)
           }
           continue
         }
@@ -226,54 +274,89 @@ export function useSkinManagement() {
         if (!skin) continue
 
         let skinFileName: string
-        let githubUrl: string
-        const downloadName = (skin.lolSkinsName || skin.nameEn || skin.name).replace(/:/g, '')
+        let githubUrl: string | undefined
 
-        if (selectedSkin.chromaId) {
-          skinFileName = `${downloadName} ${selectedSkin.chromaId}.zip`
-          const isChromaDownloaded = downloadedSkins.some(
-            (ds) => ds.championName === champion.key && ds.skinName === skinFileName
-          )
+        // Check if this is a variant selection
+        if (selectedSkin.variantId && skin.variants) {
+          const variant = skin.variants.items.find((v) => v.id === selectedSkin.variantId)
+          if (!variant) continue
 
-          if (!isChromaDownloaded) {
-            const championNameForUrl = getChampionDisplayName(champion)
-            githubUrl = `https://github.com/darkseal-org/lol-skins/blob/main/skins/${championNameForUrl}/chromas/${encodeURIComponent(downloadName)}/${encodeURIComponent(skinFileName)}`
+          // Use the variant's download URL if available, otherwise use GitHub URL
+          githubUrl = variant.downloadUrl || variant.githubUrl
+          // Extract filename from the URL for consistency
+          const urlParts = githubUrl.split('/')
+          skinFileName = decodeURIComponent(urlParts[urlParts.length - 1])
 
-            const displayMessage = isUsingSmartApply
-              ? t('status.downloading', { name: `${skin.name} (Chroma) for your team` })
-              : t('status.downloading', { name: `${skin.name} (Chroma)` })
-            setStatusMessage(displayMessage)
-
-            const downloadResult = await window.api.downloadSkin(githubUrl)
-            if (!downloadResult.success) {
-              throw new Error(downloadResult.error || 'Failed to download chroma')
-            }
-          }
+          console.log(`[Download] Using variant ${variant.name}:`)
+          console.log(`  variantId: ${selectedSkin.variantId}`)
+          console.log(`  githubUrl: ${variant.githubUrl}`)
+          console.log(`  downloadUrl: ${variant.downloadUrl}`)
+          console.log(`  using URL: ${githubUrl}`)
+          console.log(`  filename: ${skinFileName}`)
         } else {
-          skinFileName = `${downloadName}.zip`
-          const isSkinDownloaded = downloadedSkins.some(
-            (ds) => ds.championName === champion.key && ds.skinName === skinFileName
-          )
+          // Use centralized filename generation for regular skins and chromas
+          skinFileName = generateSkinFilename({
+            ...skin,
+            chromaId: selectedSkin.chromaId
+          })
 
-          if (!isSkinDownloaded) {
+          console.log(`[Download] Generating filename for ${skin.name}:`)
+          console.log(`  lolSkinsName: ${skin.lolSkinsName}`)
+          console.log(`  nameEn: ${skin.nameEn}`)
+          console.log(`  name: ${skin.name}`)
+          console.log(`  chromaId: ${selectedSkin.chromaId}`)
+          console.log(`  Generated filename: ${skinFileName}`)
+        }
+
+        // Check if skin is already downloaded
+        const isSkinDownloaded = downloadedSkins.some(
+          (ds) => ds.championName === champion.key && ds.skinName === skinFileName
+        )
+
+        if (!isSkinDownloaded) {
+          // Only generate GitHub URL if we haven't already (variants have it pre-set)
+          if (!githubUrl) {
             const championNameForUrl = getChampionDisplayName(champion)
-            githubUrl = `https://github.com/darkseal-org/lol-skins/blob/main/skins/${championNameForUrl}/${encodeURIComponent(skinFileName)}`
 
-            const displayMessage = isUsingSmartApply
-              ? t('status.downloading', { name: `${skin.name} for your team` })
-              : t('status.downloading', { name: skin.name })
-            setStatusMessage(displayMessage)
+            if (selectedSkin.chromaId) {
+              const downloadName = skinFileName.replace(/\.zip$/i, '').replace(/\s+\d+$/, '')
+              githubUrl = `https://github.com/darkseal-org/lol-skins/blob/main/skins/${championNameForUrl}/chromas/${encodeURIComponent(downloadName)}/${encodeURIComponent(skinFileName)}`
 
-            const downloadResult = await window.api.downloadSkin(githubUrl)
-            if (!downloadResult.success) {
-              throw new Error(downloadResult.error || 'Failed to download skin')
+              const displayMessage = isUsingSmartApply
+                ? t('status.downloading', { name: `${skin.name} (Chroma) for your team` })
+                : t('status.downloading', { name: `${skin.name} (Chroma)` })
+              setStatusMessage(displayMessage)
+            } else {
+              githubUrl = `https://github.com/darkseal-org/lol-skins/blob/main/skins/${championNameForUrl}/${encodeURIComponent(skinFileName)}`
+
+              const displayMessage = isUsingSmartApply
+                ? t('status.downloading', { name: `${skin.name} for your team` })
+                : t('status.downloading', { name: skin.name })
+              setStatusMessage(displayMessage)
             }
+          } else {
+            // For variants, use a more specific message
+            const variantName = selectedSkin.variantId
+              ? skin.variants?.items.find((v) => v.id === selectedSkin.variantId)?.displayName ||
+                skin.name
+              : skin.name
+            const displayMessage = isUsingSmartApply
+              ? t('status.downloading', { name: `${variantName} for your team` })
+              : t('status.downloading', { name: variantName })
+            setStatusMessage(displayMessage)
+          }
+
+          const downloadResult = await window.api.downloadSkin(githubUrl)
+          if (!downloadResult.success) {
+            throw new Error(downloadResult.error || 'Failed to download skin')
           }
         }
 
         const championNameForPatcher = getChampionDisplayName(champion)
         skinKeys.push(`${championNameForPatcher}/${skinFileName}`)
       }
+
+      console.log('[useSkinManagement] Final skinKeys array:', skinKeys)
 
       // Reload downloaded skins list
       await loadDownloadedSkins()
@@ -359,6 +442,7 @@ export function useSkinManagement() {
     loadDownloadedSkins,
     loadFavorites,
     toggleFavorite,
+    toggleChromaFavorite,
     deleteCustomSkin,
     deleteDownloadedSkin,
     applySelectedSkins,

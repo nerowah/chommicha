@@ -8,6 +8,8 @@ import {
   smartApplyEnabledAtom,
   autoApplyEnabledAtom
 } from '../store/atoms/settings.atoms'
+import { currentQueueIdAtom } from '../store/atoms/lcu.atoms'
+import { PRESELECT_CHAMPION_QUEUE_IDS } from '../constants/queues'
 
 interface TeamComposition {
   championIds: number[]
@@ -43,6 +45,7 @@ export function useSmartSkinApply({
   const [leagueClientEnabled] = useAtom(leagueClientEnabledAtom)
   const [smartApplyEnabled] = useAtom(smartApplyEnabledAtom)
   const [autoApplyEnabled] = useAtom(autoApplyEnabledAtom)
+  const [currentQueueId] = useAtom(currentQueueIdAtom)
   const [isApplying, setIsApplying] = useState(false)
   const lastAppliedTeamKey = useRef<string>('')
 
@@ -60,12 +63,21 @@ export function useSmartSkinApply({
       if (data.phase === 'ChampSelect' && data.previousPhase !== 'ChampSelect') {
         lastAppliedTeamKey.current = ''
 
-        // Also stop any running patcher from previous game
-        window.api.isPatcherRunning().then((isRunning) => {
-          if (isRunning) {
-            window.api.stopPatcher()
+        // Only stop patcher if auto-apply is enabled AND we're confident it's not a preselect queue
+        if (autoApplyEnabled) {
+          const isPreselectQueue =
+            currentQueueId !== null && PRESELECT_CHAMPION_QUEUE_IDS.includes(currentQueueId)
+
+          // Queue ID should be available immediately now thanks to lobby monitoring
+          // Only stop patcher if it's NOT a preselect queue
+          if (!isPreselectQueue) {
+            window.api.isPatcherRunning().then((isRunning) => {
+              if (isRunning) {
+                window.api.stopPatcher()
+              }
+            })
           }
-        })
+        }
       }
     })
 
@@ -144,16 +156,24 @@ export function useSmartSkinApply({
         'InProgress',
         'WaitingForStats',
         'PreEndOfGame',
-        'EndOfGame'
+        'EndOfGame',
+        'ReadyCheck',
+        'Matchmaking'
       ]
       if (newPhase && !gameAndPostGamePhases.includes(newPhase)) {
-        // Only stop patcher if auto-apply is enabled (since it would have been started automatically)
+        // Only stop patcher if auto-apply is enabled AND it's not a preselect queue
         if (autoApplyEnabled) {
-          window.api.isPatcherRunning().then((isRunning) => {
-            if (isRunning) {
-              window.api.stopPatcher()
-            }
-          })
+          const isPreselectQueue =
+            currentQueueId !== null && PRESELECT_CHAMPION_QUEUE_IDS.includes(currentQueueId)
+
+          // Queue ID should be available thanks to lobby monitoring
+          if (!isPreselectQueue) {
+            window.api.isPatcherRunning().then((isRunning) => {
+              if (isRunning) {
+                window.api.stopPatcher()
+              }
+            })
+          }
         }
       }
     })
@@ -175,7 +195,8 @@ export function useSmartSkinApply({
     isApplying,
     t,
     parentApplyFunction,
-    autoSyncedSkins
+    autoSyncedSkins,
+    currentQueueId
   ])
 
   const applySkins = useCallback(
@@ -205,9 +226,20 @@ export function useSmartSkinApply({
         } else {
           // Fallback to regular apply
           const skinKeys = selectedSkins.map((skin) => {
+            // Handle custom mods without champion (old format)
             if (skin.championKey === 'Custom') {
               return `Custom/[User] ${skin.skinName}`
             }
+
+            // Handle custom mods with champion assigned (new format)
+            // These have skinId starting with "custom_[User] "
+            if (skin.skinId.startsWith('custom_[User] ')) {
+              // Extract the filename from skinId after "custom_"
+              const modFileName = skin.skinId.replace('custom_', '')
+              return `${skin.championKey}/${modFileName}`
+            }
+
+            // Regular skins from repository
             // Use proper name priority for downloading from repository: lolSkinsName -> nameEn -> name
             const skinNameToUse = (skin.lolSkinsName || skin.skinNameEn || skin.skinName).replace(
               /:/g,

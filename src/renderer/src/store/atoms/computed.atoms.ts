@@ -12,6 +12,27 @@ import { favoritesAtom, downloadedSkinsAtom } from './skin.atoms'
 import type { Champion, Skin } from '../../App'
 import { getChampionDisplayName } from '../../utils/championUtils'
 
+// Helper function to check if a skin or any of its chromas are favorited
+function isSkinOrChromaFavorited(
+  favorites: Set<string>,
+  championKey: string,
+  skinId: string
+): boolean {
+  // Check if base skin is favorited
+  if (favorites.has(`${championKey}_${skinId}_base`)) {
+    return true
+  }
+
+  // Check if any chroma is favorited
+  for (const key of favorites) {
+    if (key.startsWith(`${championKey}_${skinId}_`) && !key.endsWith('_base')) {
+      return true
+    }
+  }
+
+  return false
+}
+
 interface DisplaySkin {
   champion: Champion
   skin: Skin
@@ -44,6 +65,17 @@ export const allChampionTagsAtom = atom((get) => {
   })
   return Array.from(tagSet).sort()
 })
+
+// Rarity hierarchy for sorting (lower index = less rare)
+const rarityOrder = [
+  'kNoRarity',
+  'kEpic',
+  'kLegendary',
+  'kUltimate',
+  'kMythic',
+  'kTranscendent',
+  'kExalted'
+]
 
 // Apply filters and sort to skins
 const applyFiltersAndSort = (
@@ -111,6 +143,28 @@ const applyFiltersAndSort = (
         return (a.champion.nameEn || a.champion.name).localeCompare(
           b.champion.nameEn || b.champion.name
         )
+      case 'rarity-asc': {
+        const aIndex = rarityOrder.indexOf(a.skin.rarity)
+        const bIndex = rarityOrder.indexOf(b.skin.rarity)
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex)
+      }
+      case 'rarity-desc': {
+        const aIndex = rarityOrder.indexOf(a.skin.rarity)
+        const bIndex = rarityOrder.indexOf(b.skin.rarity)
+        return (bIndex === -1 ? 999 : bIndex) - (aIndex === -1 ? 999 : aIndex)
+      }
+      case 'winrate-desc':
+        return (b.skin.winRate || 0) - (a.skin.winRate || 0)
+      case 'winrate-asc':
+        return (a.skin.winRate || 0) - (b.skin.winRate || 0)
+      case 'pickrate-desc':
+        return (b.skin.pickRate || 0) - (a.skin.pickRate || 0)
+      case 'pickrate-asc':
+        return (a.skin.pickRate || 0) - (b.skin.pickRate || 0)
+      case 'totalgames-desc':
+        return (b.skin.totalGames || 0) - (a.skin.totalGames || 0)
+      case 'totalgames-asc':
+        return (a.skin.totalGames || 0) - (b.skin.totalGames || 0)
       default:
         return 0
     }
@@ -149,8 +203,40 @@ export const displaySkinsAtom = atom((get) => {
     // Show skins for selected champion
     selectedChampion.skins.forEach((skin) => {
       if (skin.num !== 0) {
-        if (!showFavoritesOnly || favorites.has(`${selectedChampion.key}_${skin.id}`)) {
+        if (
+          !showFavoritesOnly ||
+          isSkinOrChromaFavorited(favorites, selectedChampion.key, skin.id)
+        ) {
           allSkins.push({ champion: selectedChampion, skin })
+        }
+      }
+    })
+
+    // Also include custom skins for this champion
+    downloadedSkins.forEach((downloadedSkin) => {
+      if (
+        downloadedSkin.skinName.includes('[User]') &&
+        downloadedSkin.championName &&
+        downloadedSkin.championName.toLowerCase() === selectedChampion.key.toLowerCase()
+      ) {
+        const customSkin: Skin = {
+          id: `custom_${downloadedSkin.skinName}`,
+          num: -1,
+          name: downloadedSkin.skinName.replace('[User] ', ''),
+          nameEn: downloadedSkin.skinName.replace('[User] ', ''),
+          chromas: false,
+          rarity: 'kNoRarity',
+          rarityGemPath: null,
+          isLegacy: false,
+          skinType: 'custom',
+          description: 'Custom imported mod'
+        }
+
+        if (
+          !showFavoritesOnly ||
+          isSkinOrChromaFavorited(favorites, selectedChampion.key, customSkin.id)
+        ) {
+          allSkins.push({ champion: selectedChampion, skin: customSkin })
         }
       }
     })
@@ -159,11 +245,54 @@ export const displaySkinsAtom = atom((get) => {
     championData.champions.forEach((champion) => {
       champion.skins.forEach((skin) => {
         if (skin.num !== 0) {
-          if (!showFavoritesOnly || favorites.has(`${champion.key}_${skin.id}`)) {
+          if (!showFavoritesOnly || isSkinOrChromaFavorited(favorites, champion.key, skin.id)) {
             allSkins.push({ champion, skin })
           }
         }
       })
+    })
+
+    // Also include all custom skins when showing all
+    downloadedSkins.forEach((downloadedSkin) => {
+      if (downloadedSkin.skinName.includes('[User]')) {
+        let champion: Champion | undefined
+
+        if (downloadedSkin.championName && downloadedSkin.championName !== 'Custom') {
+          champion = championData.champions.find(
+            (c) => c.key.toLowerCase() === downloadedSkin.championName.toLowerCase()
+          )
+        }
+
+        if (!champion) {
+          champion = {
+            id: -1,
+            key: 'Custom',
+            name: 'Custom',
+            nameEn: 'Custom',
+            title: 'Imported Mods',
+            image: '',
+            skins: [],
+            tags: []
+          }
+        }
+
+        const customSkin: Skin = {
+          id: `custom_${downloadedSkin.skinName}`,
+          num: -1,
+          name: downloadedSkin.skinName.replace('[User] ', ''),
+          nameEn: downloadedSkin.skinName.replace('[User] ', ''),
+          chromas: false,
+          rarity: 'kNoRarity',
+          rarityGemPath: null,
+          isLegacy: false,
+          skinType: 'custom',
+          description: 'Custom imported mod'
+        }
+
+        if (!showFavoritesOnly || isSkinOrChromaFavorited(favorites, champion.key, customSkin.id)) {
+          allSkins.push({ champion, skin: customSkin })
+        }
+      }
     })
   } else if (selectedChampionKey === 'custom') {
     // Show custom mods

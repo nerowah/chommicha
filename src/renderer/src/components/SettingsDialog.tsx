@@ -1,11 +1,14 @@
 import { useSetAtom } from 'jotai'
-import { ChevronDown, Gamepad2, Package, Settings } from 'lucide-react'
+import { ChevronDown, Gamepad2, Package, Settings, Monitor } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   autoAcceptEnabledAtom,
   autoRandomFavoriteSkinEnabledAtom,
   autoRandomRaritySkinEnabledAtom,
+  autoRandomHighestWinRateSkinEnabledAtom,
+  autoRandomHighestPickRateSkinEnabledAtom,
+  autoRandomMostPlayedSkinEnabledAtom,
   autoViewSkinsEnabledAtom
 } from '../store/atoms/lcu.atoms'
 import {
@@ -54,10 +57,16 @@ export function SettingsDialog({
   const [autoRandomSkinEnabled, setAutoRandomSkinEnabled] = useState(false)
   const [autoRandomRaritySkinEnabled, setAutoRandomRaritySkinEnabled] = useState(false)
   const [autoRandomFavoriteSkinEnabled, setAutoRandomFavoriteSkinEnabled] = useState(false)
+  const [autoRandomHighestWinRateSkinEnabled, setAutoRandomHighestWinRateSkinEnabled] =
+    useState(false)
+  const [autoRandomHighestPickRateSkinEnabled, setAutoRandomHighestPickRateSkinEnabled] =
+    useState(false)
+  const [autoRandomMostPlayedSkinEnabled, setAutoRandomMostPlayedSkinEnabled] = useState(false)
   const [allowMultipleSkinsPerChampion, setAllowMultipleSkinsPerChampion] = useState(false)
   const [inGameOverlayEnabled, setInGameOverlayEnabled] = useState(false)
   const [autoAcceptEnabled, setAutoAcceptEnabled] = useState(false)
   const [autoFixModIssues, setAutoFixModIssues] = useState(false)
+  const [minimizeToTray, setMinimizeToTray] = useState(false)
   const [loading, setLoading] = useState(true)
 
   // Atom setters for immediate updates
@@ -66,6 +75,13 @@ export function SettingsDialog({
   const setAutoViewSkinsEnabledAtom = useSetAtom(autoViewSkinsEnabledAtom)
   const setAutoRandomRaritySkinEnabledAtom = useSetAtom(autoRandomRaritySkinEnabledAtom)
   const setAutoRandomFavoriteSkinEnabledAtom = useSetAtom(autoRandomFavoriteSkinEnabledAtom)
+  const setAutoRandomHighestWinRateSkinEnabledAtom = useSetAtom(
+    autoRandomHighestWinRateSkinEnabledAtom
+  )
+  const setAutoRandomHighestPickRateSkinEnabledAtom = useSetAtom(
+    autoRandomHighestPickRateSkinEnabledAtom
+  )
+  const setAutoRandomMostPlayedSkinEnabledAtom = useSetAtom(autoRandomMostPlayedSkinEnabledAtom)
   const setSmartApplyEnabledAtom = useSetAtom(smartApplyEnabledAtom)
   const setAutoApplyEnabledAtom = useSetAtom(autoApplyEnabledAtom)
   const setAutoApplyTriggerTimeAtom = useSetAtom(autoApplyTriggerTimeAtom)
@@ -76,6 +92,55 @@ export function SettingsDialog({
       loadSettings()
     }
   }, [isOpen])
+
+  // Listen for settings changes from tray menu
+  useEffect(() => {
+    const handleSettingsChanged = (key: string, value: any) => {
+      switch (key) {
+        case 'leagueClientEnabled':
+          setLeagueClientEnabled(value)
+          setLeagueClientEnabledAtom(value)
+          onLeagueClientChange?.(value)
+          break
+        case 'autoAcceptEnabled':
+          setAutoAcceptEnabled(value)
+          setAutoAcceptEnabledAtom(value)
+          break
+        case 'championDetection':
+          setChampionDetection(value)
+          setChampionDetectionEnabledAtom(value)
+          onChampionDetectionChange?.(value)
+          break
+        case 'autoViewSkinsEnabled':
+          setAutoViewSkinsEnabled(value)
+          setAutoViewSkinsEnabledAtom(value)
+          break
+        case 'smartApplyEnabled':
+          setSmartApplyEnabled(value)
+          setSmartApplyEnabledAtom(value)
+          break
+        case 'autoApplyEnabled':
+          setAutoApplyEnabled(value)
+          setAutoApplyEnabledAtom(value)
+          break
+        case 'minimizeToTray':
+          setMinimizeToTray(value)
+          break
+      }
+    }
+
+    const unsubscribe = window.api.onSettingsChanged(handleSettingsChanged)
+    return () => unsubscribe()
+  }, [
+    setLeagueClientEnabledAtom,
+    setChampionDetectionEnabledAtom,
+    setAutoViewSkinsEnabledAtom,
+    setAutoAcceptEnabledAtom,
+    setSmartApplyEnabledAtom,
+    setAutoApplyEnabledAtom,
+    onLeagueClientChange,
+    onChampionDetectionChange
+  ])
 
   const loadSettings = async () => {
     try {
@@ -90,10 +155,16 @@ export function SettingsDialog({
       setAutoRandomSkinEnabled(settings.autoRandomSkinEnabled === true)
       setAutoRandomRaritySkinEnabled(settings.autoRandomRaritySkinEnabled === true)
       setAutoRandomFavoriteSkinEnabled(settings.autoRandomFavoriteSkinEnabled === true)
+      setAutoRandomHighestWinRateSkinEnabled(settings.autoRandomHighestWinRateSkinEnabled === true)
+      setAutoRandomHighestPickRateSkinEnabled(
+        settings.autoRandomHighestPickRateSkinEnabled === true
+      )
+      setAutoRandomMostPlayedSkinEnabled(settings.autoRandomMostPlayedSkinEnabled === true)
       setAllowMultipleSkinsPerChampion(settings.allowMultipleSkinsPerChampion === true)
       setInGameOverlayEnabled(settings.inGameOverlayEnabled === true)
       setAutoAcceptEnabled(settings.autoAcceptEnabled === true)
       setAutoFixModIssues(settings.autoFixModIssues === true)
+      setMinimizeToTray(settings.minimizeToTray === true)
     } catch (error) {
       console.error('Failed to load settings:', error)
     } finally {
@@ -116,6 +187,9 @@ export function SettingsDialog({
         setAutoRandomSkinEnabled(false)
         setAutoRandomRaritySkinEnabled(false)
         setAutoRandomFavoriteSkinEnabled(false)
+        setAutoRandomHighestWinRateSkinEnabled(false)
+        setAutoRandomHighestPickRateSkinEnabled(false)
+        setAutoRandomMostPlayedSkinEnabled(false)
         setInGameOverlayEnabled(false)
         setAutoAcceptEnabled(false)
 
@@ -124,6 +198,9 @@ export function SettingsDialog({
         setAutoViewSkinsEnabledAtom(false)
         setAutoRandomRaritySkinEnabledAtom(false)
         setAutoRandomFavoriteSkinEnabledAtom(false)
+        setAutoRandomHighestWinRateSkinEnabledAtom(false)
+        setAutoRandomHighestPickRateSkinEnabledAtom(false)
+        setAutoRandomMostPlayedSkinEnabledAtom(false)
         setAutoAcceptEnabledAtom(false)
 
         await window.api.setSettings('championDetection', false)
@@ -133,6 +210,9 @@ export function SettingsDialog({
         await window.api.setSettings('autoRandomSkinEnabled', false)
         await window.api.setSettings('autoRandomRaritySkinEnabled', false)
         await window.api.setSettings('autoRandomFavoriteSkinEnabled', false)
+        await window.api.setSettings('autoRandomHighestWinRateSkinEnabled', false)
+        await window.api.setSettings('autoRandomHighestPickRateSkinEnabled', false)
+        await window.api.setSettings('autoRandomMostPlayedSkinEnabled', false)
         await window.api.setSettings('inGameOverlayEnabled', false)
         await window.api.setSettings('autoAcceptEnabled', false)
 
@@ -277,6 +357,9 @@ export function SettingsDialog({
   const getRandomSkinValue = () => {
     if (autoRandomFavoriteSkinEnabled) return 'favorite'
     if (autoRandomRaritySkinEnabled) return 'rarity'
+    if (autoRandomHighestWinRateSkinEnabled) return 'winrate'
+    if (autoRandomHighestPickRateSkinEnabled) return 'pickrate'
+    if (autoRandomMostPlayedSkinEnabled) return 'mostplayed'
     if (autoRandomSkinEnabled) return 'random'
     return 'none'
   }
@@ -286,12 +369,21 @@ export function SettingsDialog({
     setAutoRandomSkinEnabled(false)
     setAutoRandomRaritySkinEnabled(false)
     setAutoRandomFavoriteSkinEnabled(false)
+    setAutoRandomHighestWinRateSkinEnabled(false)
+    setAutoRandomHighestPickRateSkinEnabled(false)
+    setAutoRandomMostPlayedSkinEnabled(false)
     setAutoRandomRaritySkinEnabledAtom(false)
     setAutoRandomFavoriteSkinEnabledAtom(false)
+    setAutoRandomHighestWinRateSkinEnabledAtom(false)
+    setAutoRandomHighestPickRateSkinEnabledAtom(false)
+    setAutoRandomMostPlayedSkinEnabledAtom(false)
 
     await window.api.setSettings('autoRandomSkinEnabled', false)
     await window.api.setSettings('autoRandomRaritySkinEnabled', false)
     await window.api.setSettings('autoRandomFavoriteSkinEnabled', false)
+    await window.api.setSettings('autoRandomHighestWinRateSkinEnabled', false)
+    await window.api.setSettings('autoRandomHighestPickRateSkinEnabled', false)
+    await window.api.setSettings('autoRandomMostPlayedSkinEnabled', false)
 
     // Then enable the selected option
     switch (value) {
@@ -308,6 +400,21 @@ export function SettingsDialog({
         setAutoRandomFavoriteSkinEnabled(true)
         setAutoRandomFavoriteSkinEnabledAtom(true)
         await window.api.setSettings('autoRandomFavoriteSkinEnabled', true)
+        break
+      case 'winrate':
+        setAutoRandomHighestWinRateSkinEnabled(true)
+        setAutoRandomHighestWinRateSkinEnabledAtom(true)
+        await window.api.setSettings('autoRandomHighestWinRateSkinEnabled', true)
+        break
+      case 'pickrate':
+        setAutoRandomHighestPickRateSkinEnabled(true)
+        setAutoRandomHighestPickRateSkinEnabledAtom(true)
+        await window.api.setSettings('autoRandomHighestPickRateSkinEnabled', true)
+        break
+      case 'mostplayed':
+        setAutoRandomMostPlayedSkinEnabled(true)
+        setAutoRandomMostPlayedSkinEnabledAtom(true)
+        await window.api.setSettings('autoRandomMostPlayedSkinEnabled', true)
         break
       case 'none':
         // Check if we should disable the overlay
@@ -327,6 +434,15 @@ export function SettingsDialog({
     }
   }
 
+  const handleMinimizeToTrayChange = async (checked: boolean) => {
+    setMinimizeToTray(checked)
+    try {
+      await window.api.setSettings('minimizeToTray', checked)
+    } catch (error) {
+      console.error('Failed to save minimize to tray setting:', error)
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
@@ -338,8 +454,12 @@ export function SettingsDialog({
           <DialogDescription>{t('settings.description')}</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="league-client" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="general" className="flex items-center gap-2">
+              <Monitor className="w-4 h-4" />
+              {t('settings.tabs.general')}
+            </TabsTrigger>
             <TabsTrigger value="league-client" className="flex items-center gap-2">
               <Gamepad2 className="w-4 h-4" />
               {t('settings.tabs.leagueClient')}
@@ -349,6 +469,25 @@ export function SettingsDialog({
               {t('settings.tabs.skinManagement')}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="general" className="space-y-6 mt-6">
+            {/* Minimize to Tray Setting */}
+            <div className="flex items-center justify-between space-x-4">
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-text-primary">
+                  {t('settings.minimizeToTray.title')}
+                </h3>
+                <p className="text-xs text-text-secondary mt-1">
+                  {t('settings.minimizeToTray.description')}
+                </p>
+              </div>
+              <Switch
+                checked={minimizeToTray}
+                onCheckedChange={handleMinimizeToTrayChange}
+                disabled={loading}
+              />
+            </div>
+          </TabsContent>
 
           <TabsContent value="league-client" className="space-y-6 mt-6">
             {/* League Client Master Toggle */}
@@ -414,112 +553,174 @@ export function SettingsDialog({
                         </div>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                      {/* Auto View Skins Setting */}
-                      <div className="flex items-center justify-between space-x-4">
-                        <div className="flex-1">
-                          <h3 className="text-sm font-medium text-text-primary">
-                            {t('settings.autoViewSkins.title')}
-                          </h3>
-                          <p className="text-xs text-text-secondary mt-1">
-                            {t('settings.autoViewSkins.description')}
-                          </p>
-                        </div>
-                        <Switch
-                          checked={autoViewSkinsEnabled}
-                          onCheckedChange={handleAutoViewSkinsChange}
-                          disabled={loading || !championDetection}
-                        />
-                      </div>
-
-                      {/* Random Skin Selection */}
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-medium text-text-primary">
-                          {t('settings.randomSkinSelection.title')}
-                        </h3>
-                        <RadioGroup
-                          value={getRandomSkinValue()}
-                          onValueChange={handleRandomSkinChange}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="none"
-                              id="none"
-                              disabled={loading || !championDetection}
-                            />
-                            <Label htmlFor="none" className="text-sm font-normal cursor-pointer">
-                              {t('settings.randomSkinSelection.none')}
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="random"
-                              id="random"
-                              disabled={loading || !championDetection}
-                            />
-                            <Label htmlFor="random" className="text-sm font-normal cursor-pointer">
-                              <div>
-                                <div>{t('settings.autoRandomSkin.title')}</div>
-                                <div className="text-xs text-text-secondary">
-                                  {t('settings.autoRandomSkin.description')}
-                                </div>
-                              </div>
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="rarity"
-                              id="rarity"
-                              disabled={loading || !championDetection}
-                            />
-                            <Label htmlFor="rarity" className="text-sm font-normal cursor-pointer">
-                              <div>
-                                <div>{t('settings.autoRandomRaritySkin.title')}</div>
-                                <div className="text-xs text-text-secondary">
-                                  {t('settings.autoRandomRaritySkin.description')}
-                                </div>
-                              </div>
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="favorite"
-                              id="favorite"
-                              disabled={loading || !championDetection}
-                            />
-                            <Label
-                              htmlFor="favorite"
-                              className="text-sm font-normal cursor-pointer"
-                            >
-                              <div>
-                                <div>{t('settings.autoRandomFavoriteSkin.title')}</div>
-                                <div className="text-xs text-text-secondary">
-                                  {t('settings.autoRandomFavoriteSkin.description')}
-                                </div>
-                              </div>
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-
-                      {/* In-Game Overlay Setting */}
-                      {getRandomSkinValue() !== 'none' && (
+                    <AccordionContent className="pt-4">
+                      <div className="space-y-4 p-4 rounded-lg border border-border bg-surface/30">
+                        {/* Auto View Skins Setting */}
                         <div className="flex items-center justify-between space-x-4">
                           <div className="flex-1">
                             <h3 className="text-sm font-medium text-text-primary">
-                              {t('settings.inGameOverlay.title')}
+                              {t('settings.autoViewSkins.title')}
                             </h3>
                             <p className="text-xs text-text-secondary mt-1">
-                              {t('settings.inGameOverlay.description')}
+                              {t('settings.autoViewSkins.description')}
                             </p>
                           </div>
                           <Switch
-                            checked={inGameOverlayEnabled}
-                            onCheckedChange={handleInGameOverlayChange}
-                            disabled={loading}
+                            checked={autoViewSkinsEnabled}
+                            onCheckedChange={handleAutoViewSkinsChange}
+                            disabled={loading || !championDetection}
                           />
                         </div>
-                      )}
+
+                        {/* Random Skin Selection */}
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-medium text-text-primary">
+                            {t('settings.randomSkinSelection.title')}
+                          </h3>
+                          <RadioGroup
+                            value={getRandomSkinValue()}
+                            onValueChange={handleRandomSkinChange}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="none"
+                                id="none"
+                                disabled={loading || !championDetection}
+                              />
+                              <Label htmlFor="none" className="text-sm font-normal cursor-pointer">
+                                {t('settings.randomSkinSelection.none')}
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="random"
+                                id="random"
+                                disabled={loading || !championDetection}
+                              />
+                              <Label
+                                htmlFor="random"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                <div>
+                                  <div>{t('settings.autoRandomSkin.title')}</div>
+                                  <div className="text-xs text-text-secondary">
+                                    {t('settings.autoRandomSkin.description')}
+                                  </div>
+                                </div>
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="rarity"
+                                id="rarity"
+                                disabled={loading || !championDetection}
+                              />
+                              <Label
+                                htmlFor="rarity"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                <div>
+                                  <div>{t('settings.autoRandomRaritySkin.title')}</div>
+                                  <div className="text-xs text-text-secondary">
+                                    {t('settings.autoRandomRaritySkin.description')}
+                                  </div>
+                                </div>
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="favorite"
+                                id="favorite"
+                                disabled={loading || !championDetection}
+                              />
+                              <Label
+                                htmlFor="favorite"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                <div>
+                                  <div>{t('settings.autoRandomFavoriteSkin.title')}</div>
+                                  <div className="text-xs text-text-secondary">
+                                    {t('settings.autoRandomFavoriteSkin.description')}
+                                  </div>
+                                </div>
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="winrate"
+                                id="winrate"
+                                disabled={loading || !championDetection}
+                              />
+                              <Label
+                                htmlFor="winrate"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                <div>
+                                  <div>{t('settings.autoRandomHighestWinRateSkin.title')}</div>
+                                  <div className="text-xs text-text-secondary">
+                                    {t('settings.autoRandomHighestWinRateSkin.description')}
+                                  </div>
+                                </div>
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="pickrate"
+                                id="pickrate"
+                                disabled={loading || !championDetection}
+                              />
+                              <Label
+                                htmlFor="pickrate"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                <div>
+                                  <div>{t('settings.autoRandomHighestPickRateSkin.title')}</div>
+                                  <div className="text-xs text-text-secondary">
+                                    {t('settings.autoRandomHighestPickRateSkin.description')}
+                                  </div>
+                                </div>
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="mostplayed"
+                                id="mostplayed"
+                                disabled={loading || !championDetection}
+                              />
+                              <Label
+                                htmlFor="mostplayed"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                <div>
+                                  <div>{t('settings.autoRandomMostPlayedSkin.title')}</div>
+                                  <div className="text-xs text-text-secondary">
+                                    {t('settings.autoRandomMostPlayedSkin.description')}
+                                  </div>
+                                </div>
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+
+                        {/* In-Game Overlay Setting */}
+                        {getRandomSkinValue() !== 'none' && (
+                          <div className="flex items-center justify-between space-x-4">
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium text-text-primary">
+                                {t('settings.inGameOverlay.title')}
+                              </h3>
+                              <p className="text-xs text-text-secondary mt-1">
+                                {t('settings.inGameOverlay.description')}
+                              </p>
+                            </div>
+                            <Switch
+                              checked={inGameOverlayEnabled}
+                              onCheckedChange={handleInGameOverlayChange}
+                              disabled={loading}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>

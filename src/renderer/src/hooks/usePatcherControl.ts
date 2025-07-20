@@ -8,6 +8,8 @@ import {
 } from '../store/atoms/game.atoms'
 import { selectedSkinsAtom } from '../store/atoms'
 import { downloadedSkinsAtom } from '../store/atoms/skin.atoms'
+import { currentQueueIdAtom } from '../store/atoms/lcu.atoms'
+import { PRESELECT_CHAMPION_QUEUE_IDS } from '../constants/queues'
 
 export function usePatcherControl() {
   const { t } = useTranslation()
@@ -16,6 +18,7 @@ export function usePatcherControl() {
   const [loadingStates, setLoadingStates] = useAtom(loadingStatesAtom)
   const [selectedSkins, setSelectedSkins] = useAtom(selectedSkinsAtom)
   const [downloadedSkins, setDownloadedSkins] = useAtom(downloadedSkinsAtom)
+  const [currentQueueId] = useAtom(currentQueueIdAtom)
 
   const checkPatcherStatus = useCallback(async () => {
     const isRunning = await window.api.isPatcherRunning()
@@ -54,19 +57,41 @@ export function usePatcherControl() {
   useEffect(() => {
     const unsubscribePhase = window.api.onLcuPhaseChanged(async (data) => {
       // Post-game phases where we should stop the patcher
-      const postGamePhases = ['WaitingForStats', 'PreEndOfGame', 'EndOfGame', 'Lobby']
+      const postGamePhases = ['WaitingForStats', 'PreEndOfGame', 'EndOfGame']
 
-      // Check if we're leaving champion select without entering game
+      // Check if we're actually coming from a game to lobby (post-game)
+      const isPostGameLobby =
+        data.phase === 'Lobby' &&
+        ['WaitingForStats', 'PreEndOfGame', 'EndOfGame'].includes(data.previousPhase)
+
+      // Check if we're leaving champion select without entering game (dodge)
+      // Exclude ReadyCheck and Matchmaking as these are normal flow towards game
       const leavingChampSelect =
-        data.previousPhase === 'ChampSelect' && !['InGame', 'GameStart'].includes(data.phase)
+        data.previousPhase === 'ChampSelect' &&
+        !['InGame', 'GameStart', 'InProgress', 'ReadyCheck', 'Matchmaking'].includes(data.phase)
 
-      if (postGamePhases.includes(data.phase) || leavingChampSelect) {
+      if (postGamePhases.includes(data.phase) || isPostGameLobby || leavingChampSelect) {
         const autoApplyEnabled = await window.api.getSettings('autoApplyEnabled')
 
+        // Only stop patcher if auto-apply is enabled AND we're confident it's not a preselect queue
         if (autoApplyEnabled !== false) {
-          const isRunning = await window.api.isPatcherRunning()
-          if (isRunning) {
-            await stopPatcher()
+          // Check if this was a preselect champion queue
+          const isPreselectQueue =
+            currentQueueId !== null && PRESELECT_CHAMPION_QUEUE_IDS.includes(currentQueueId)
+
+          // If currentQueueId is null, we don't know the queue type yet, so don't stop the patcher
+          // Only stop if we're certain it's NOT a preselect queue (currentQueueId is set and not in preselect list)
+          if (currentQueueId !== null && !isPreselectQueue) {
+            const isRunning = await window.api.isPatcherRunning()
+            if (isRunning) {
+              await stopPatcher()
+            }
+          } else if (currentQueueId !== null) {
+            console.log(
+              `[PatcherControl] Not stopping patcher for preselect queue ${currentQueueId}`
+            )
+          } else {
+            console.log(`[PatcherControl] Not stopping patcher - queue ID not yet available`)
           }
         }
 
@@ -76,7 +101,7 @@ export function usePatcherControl() {
         )
         if (
           autoRandomRaritySkinEnabled &&
-          (postGamePhases.includes(data.phase) || leavingChampSelect)
+          (postGamePhases.includes(data.phase) || isPostGameLobby || leavingChampSelect)
         ) {
           const autoSelectedSkins = selectedSkins.filter((skin) => skin.isAutoSelected)
 
@@ -125,7 +150,8 @@ export function usePatcherControl() {
     downloadedSkins,
     setDownloadedSkins,
     setStatusMessage,
-    t
+    t,
+    currentQueueId
   ])
 
   return {

@@ -1,10 +1,10 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import path from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import icon from '../../build/icon.png?asset'
 import { SkinDownloader } from './services/skinDownloader'
 import { ModToolsWrapper } from './services/modToolsWrapper'
 import { championDataService } from './services/championDataService'
@@ -21,6 +21,13 @@ import { skinApplyService } from './services/skinApplyService'
 import { overlayWindowManager } from './services/overlayWindowManager'
 import { autoBanPickService } from './services/autoBanPickService'
 import { multiRitoFixesService } from './services/multiRitoFixesService'
+import { skinMigrationService } from './services/skinMigrationService'
+import {
+  translationService,
+  supportedLanguages,
+  type LanguageCode
+} from './services/translationService'
+import { SkinInfo } from './types'
 // Import SelectedSkin type from renderer atoms
 interface SelectedSkin {
   championKey: string
@@ -32,6 +39,7 @@ interface SelectedSkin {
   skinNum: number
   chromaId?: string
   isDownloaded?: boolean
+  downloadedFilename?: string
 }
 
 // Initialize services
@@ -57,11 +65,51 @@ let rendererAutoSelectedSkin: {
 // Store the current champion ID for overlay display
 let currentChampionId: number | null = null
 
+// Global references to prevent garbage collection
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+
+// Request single instance lock
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  // Another instance is already running, quit this one
+  app.quit()
+} else {
+  // Handle second instance attempt
+  app.on('second-instance', () => {
+    // Someone tried to run a second instance, focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      if (!mainWindow.isVisible()) {
+        mainWindow.show()
+      }
+      mainWindow.focus()
+    }
+  })
+}
+
 function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  // Get saved window bounds from settings
+  const savedBounds = settingsService.get('windowBounds')
+  const defaultBounds = {
     width: 1200,
     height: 800,
+    x: undefined,
+    y: undefined
+  }
+
+  // Use saved bounds if available, otherwise use defaults
+  const windowBounds = savedBounds || defaultBounds
+
+  // Create the browser window.
+  mainWindow = new BrowserWindow({
+    width: windowBounds.width,
+    height: windowBounds.height,
+    x: windowBounds.x,
+    y: windowBounds.y,
     show: false,
     frame: false,
     titleBarStyle: 'hidden',
@@ -76,9 +124,11 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-    updaterService.setMainWindow(mainWindow)
-    modToolsWrapper.setMainWindow(mainWindow)
+    mainWindow?.show()
+    if (mainWindow) {
+      updaterService.setMainWindow(mainWindow)
+      modToolsWrapper.setMainWindow(mainWindow)
+    }
 
     // Check for updates after window is ready
     // Only in production mode
@@ -88,6 +138,29 @@ function createWindow(): void {
       }, 3000) // Delay 3 seconds to let the app fully load
     }
   })
+
+  // Save window bounds when moved or resized
+  let saveWindowBoundsTimeout: NodeJS.Timeout | null = null
+
+  const saveWindowBounds = () => {
+    if (!mainWindow) return
+
+    // Clear existing timeout
+    if (saveWindowBoundsTimeout) {
+      clearTimeout(saveWindowBoundsTimeout)
+    }
+
+    // Debounce saves to avoid excessive writes
+    saveWindowBoundsTimeout = setTimeout(() => {
+      if (mainWindow && !mainWindow.isMinimized() && !mainWindow.isFullScreen()) {
+        const bounds = mainWindow.getBounds()
+        settingsService.set('windowBounds', bounds)
+      }
+    }, 500)
+  }
+
+  mainWindow.on('resize', saveWindowBounds)
+  mainWindow.on('move', saveWindowBounds)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -103,86 +176,305 @@ function createWindow(): void {
   }
 }
 
+function updateTrayMenu(): void {
+  if (!tray) return
+
+  // Get current settings
+  const minimizeToTray = settingsService.get('minimizeToTray') || false
+  const leagueClientEnabled = settingsService.get('leagueClientEnabled') !== false
+  const autoAcceptEnabled = settingsService.get('autoAcceptEnabled') || false
+  const championDetection = settingsService.get('championDetection') !== false
+  const autoViewSkinsEnabled = settingsService.get('autoViewSkinsEnabled') || false
+  const smartApplyEnabled = settingsService.get('smartApplyEnabled') !== false
+  const autoApplyEnabled = settingsService.get('autoApplyEnabled') !== false
+
+  const t = translationService.t.bind(translationService)
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: mainWindow?.isVisible()
+        ? t('tray.hide', 'Hide Chommicha')
+        : t('tray.show', 'Show Chommicha'),
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isVisible()) {
+            mainWindow.hide()
+          } else {
+            mainWindow.show()
+            mainWindow.focus()
+          }
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: t('tray.language', 'Language'),
+      submenu: supportedLanguages.map((lang) => ({
+        label: `${lang.flag} ${lang.name}`,
+        type: 'radio' as const,
+        checked: translationService.getCurrentLanguage() === lang.code,
+        click: () => {
+          translationService.setLanguage(lang.code)
+          settingsService.set('language', lang.code)
+          updateTrayMenu()
+          // Notify renderer
+          mainWindow?.webContents.send('language-changed', lang.code)
+        }
+      }))
+    },
+    { type: 'separator' },
+    {
+      label: t('nav.settings', 'Settings'),
+      submenu: [
+        {
+          label: t('settings.minimizeToTray.title', 'Minimize to Tray'),
+          type: 'checkbox',
+          checked: minimizeToTray,
+          click: () => {
+            settingsService.set('minimizeToTray', !minimizeToTray)
+            updateTrayMenu()
+          }
+        },
+        { type: 'separator' },
+        {
+          label: t('settings.leagueClient.title', 'League Client Integration'),
+          type: 'checkbox',
+          checked: leagueClientEnabled,
+          click: async () => {
+            const newValue = !leagueClientEnabled
+            settingsService.set('leagueClientEnabled', newValue)
+            if (newValue) {
+              await lcuConnector.connect()
+            } else {
+              await lcuConnector.disconnect()
+            }
+            updateTrayMenu()
+            // Notify renderer
+            mainWindow?.webContents.send('settings-changed', 'leagueClientEnabled', newValue)
+          }
+        },
+        {
+          label: t('settings.autoAccept.title', 'Auto Accept Match'),
+          type: 'checkbox',
+          checked: autoAcceptEnabled,
+          enabled: leagueClientEnabled,
+          click: () => {
+            settingsService.set('autoAcceptEnabled', !autoAcceptEnabled)
+            updateTrayMenu()
+            // Notify renderer
+            mainWindow?.webContents.send(
+              'settings-changed',
+              'autoAcceptEnabled',
+              !autoAcceptEnabled
+            )
+          }
+        },
+        {
+          label: t('settings.championDetection.title', 'Champion Detection'),
+          type: 'checkbox',
+          checked: championDetection,
+          enabled: leagueClientEnabled,
+          click: () => {
+            settingsService.set('championDetection', !championDetection)
+            updateTrayMenu()
+            // Notify renderer
+            mainWindow?.webContents.send(
+              'settings-changed',
+              'championDetection',
+              !championDetection
+            )
+          }
+        },
+        {
+          label: t('settings.autoViewSkins.title', 'Auto View Skins'),
+          type: 'checkbox',
+          checked: autoViewSkinsEnabled,
+          enabled: leagueClientEnabled && championDetection,
+          click: () => {
+            settingsService.set('autoViewSkinsEnabled', !autoViewSkinsEnabled)
+            updateTrayMenu()
+            // Notify renderer
+            mainWindow?.webContents.send(
+              'settings-changed',
+              'autoViewSkinsEnabled',
+              !autoViewSkinsEnabled
+            )
+          }
+        },
+        { type: 'separator' },
+        {
+          label: t('settings.smartApply.title', 'Smart Apply'),
+          type: 'checkbox',
+          checked: smartApplyEnabled,
+          enabled: leagueClientEnabled,
+          click: () => {
+            settingsService.set('smartApplyEnabled', !smartApplyEnabled)
+            updateTrayMenu()
+            // Notify renderer
+            mainWindow?.webContents.send(
+              'settings-changed',
+              'smartApplyEnabled',
+              !smartApplyEnabled
+            )
+          }
+        },
+        {
+          label: t('settings.autoApply.title', 'Auto Apply'),
+          type: 'checkbox',
+          checked: autoApplyEnabled,
+          enabled: leagueClientEnabled && smartApplyEnabled,
+          click: () => {
+            settingsService.set('autoApplyEnabled', !autoApplyEnabled)
+            updateTrayMenu()
+            // Notify renderer
+            mainWindow?.webContents.send('settings-changed', 'autoApplyEnabled', !autoApplyEnabled)
+          }
+        }
+      ]
+    },
+    { type: 'separator' },
+    {
+      label: t('tray.openSettings', 'Open Settings'),
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+          // Send event to open settings dialog
+          mainWindow.webContents.send('open-settings')
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: t('tray.quit', 'Quit Chommicha'),
+      click: () => {
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setContextMenu(contextMenu)
+}
+
+function createTray(): void {
+  const trayIcon = nativeImage.createFromPath(icon)
+  tray = new Tray(trayIcon)
+  tray.setToolTip('Chommicha')
+
+  // Initial menu
+  updateTrayMenu()
+
+  // Double click to show window
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide()
+      } else {
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    }
+  })
+
+  // Update menu when window visibility changes
+  mainWindow?.on('show', () => updateTrayMenu())
+  mainWindow?.on('hide', () => updateTrayMenu())
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(async () => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+if (gotTheLock) {
+  app.whenReady().then(async () => {
+    // Set app user model id for windows
+    electronApp.setAppUserModelId('com.electron')
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+    // Initialize migration service
+    await skinMigrationService.initialize()
 
-  // Initialize services
-  await skinDownloader.initialize()
-  await favoritesService.initialize()
-  await fileImportService.initialize()
+    // Default open or close DevTools by F12 in development
+    // and ignore CommandOrControl + R in production.
+    // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
 
-  // Set up IPC handlers
-  setupIpcHandlers()
+    // Initialize services
+    await skinDownloader.initialize()
+    await favoritesService.initialize()
+    await fileImportService.initialize()
 
-  createWindow()
+    // Initialize translation service with saved language
+    const savedLanguage = settingsService.get('language') || 'en_US'
+    translationService.setLanguage(savedLanguage as LanguageCode)
 
-  // Create overlay if enabled in settings
-  const inGameOverlayEnabled = settingsService.get('inGameOverlayEnabled')
-  const autoRandomSkinEnabled = settingsService.get('autoRandomSkinEnabled')
-  const autoRandomRaritySkinEnabled = settingsService.get('autoRandomRaritySkinEnabled')
-  const autoRandomFavoriteSkinEnabled = settingsService.get('autoRandomFavoriteSkinEnabled')
-  const championDetectionEnabled = settingsService.get('championDetectionEnabled')
-  const leagueClientEnabled = settingsService.get('leagueClientEnabled')
+    // Set up IPC handlers
+    setupIpcHandlers()
 
-  const anyAutoRandomEnabled =
-    autoRandomSkinEnabled || autoRandomRaritySkinEnabled || autoRandomFavoriteSkinEnabled
+    createWindow()
+    createTray()
 
-  if (
-    inGameOverlayEnabled &&
-    anyAutoRandomEnabled &&
-    championDetectionEnabled &&
-    leagueClientEnabled
-  ) {
-    try {
-      await overlayWindowManager.create()
-    } catch (error) {
-      console.error('[Main] Failed to create overlay on startup:', error)
+    // Create overlay if enabled in settings
+    const inGameOverlayEnabled = settingsService.get('inGameOverlayEnabled')
+    const autoRandomSkinEnabled = settingsService.get('autoRandomSkinEnabled')
+    const autoRandomRaritySkinEnabled = settingsService.get('autoRandomRaritySkinEnabled')
+    const autoRandomFavoriteSkinEnabled = settingsService.get('autoRandomFavoriteSkinEnabled')
+    const championDetectionEnabled = settingsService.get('championDetectionEnabled')
+    const leagueClientEnabled = settingsService.get('leagueClientEnabled')
+
+    const anyAutoRandomEnabled =
+      autoRandomSkinEnabled || autoRandomRaritySkinEnabled || autoRandomFavoriteSkinEnabled
+
+    if (
+      inGameOverlayEnabled &&
+      anyAutoRandomEnabled &&
+      championDetectionEnabled &&
+      leagueClientEnabled
+    ) {
+      try {
+        await overlayWindowManager.create()
+      } catch (error) {
+        console.error('[Main] Failed to create overlay on startup:', error)
+      }
     }
-  }
 
-  // Initialize LCU connection
-  setupLCUConnection()
+    // Initialize LCU connection
+    setupLCUConnection()
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    app.on('activate', function () {
+      // On macOS it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
   })
-})
+}
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
+// Only set up these handlers for the primary instance
+if (gotTheLock) {
+  // Quit when all windows are closed, except on macOS. There, it's common
+  // for applications and their menu bar to stay active until the user quits
+  // explicitly with Cmd + Q.
+  app.on('window-all-closed', () => {
+    const minimizeToTray = settingsService.get('minimizeToTray')
+    if (!minimizeToTray && process.platform !== 'darwin') {
+      app.quit()
+    }
+  })
 
-// Cleanup temp transfers on exit
-app.on('before-quit', async () => {
-  // Stop LCU auto-connect
-  lcuConnector.stopAutoConnect()
-  lcuConnector.disconnect()
+  // Cleanup temp transfers on exit
+  app.on('before-quit', async () => {
+    // Stop LCU auto-connect
+    lcuConnector.stopAutoConnect()
+    lcuConnector.disconnect()
 
-  const tempTransfersDir = path.join(app.getPath('userData'), 'temp-transfers')
-  try {
-    await fs.promises.rm(tempTransfersDir, { recursive: true, force: true })
-  } catch {
-    // Ignore errors during cleanup
-  }
-})
+    const tempTransfersDir = path.join(app.getPath('userData'), 'temp-transfers')
+    try {
+      await fs.promises.rm(tempTransfersDir, { recursive: true, force: true })
+    } catch {
+      // Ignore errors during cleanup
+    }
+  })
+}
 
 // Set up IPC handlers for communication with renderer
 function setupIpcHandlers(): void {
@@ -319,6 +611,94 @@ function setupIpcHandlers(): void {
     return { success: false }
   })
 
+  // Batch download handlers
+  ipcMain.handle(
+    'download-all-skins',
+    async (
+      event,
+      skinUrls: string[],
+      options?: { excludeChromas?: boolean; concurrency?: number }
+    ) => {
+      try {
+        await skinDownloader.downloadAllSkins(
+          skinUrls,
+          (progress) => {
+            event.sender.send('download-all-skins-progress', progress)
+          },
+          options
+        )
+        return { success: true }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+    }
+  )
+
+  ipcMain.handle('pause-batch-download', async () => {
+    try {
+      skinDownloader.pauseBatchDownload()
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  })
+
+  ipcMain.handle('resume-batch-download', async () => {
+    try {
+      skinDownloader.resumeBatchDownload()
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  })
+
+  ipcMain.handle('cancel-batch-download', async () => {
+    try {
+      skinDownloader.cancelBatchDownload()
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  })
+
+  ipcMain.handle('get-batch-download-state', async () => {
+    try {
+      const state = skinDownloader.getBatchDownloadState()
+      return { success: true, data: state }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  })
+
+  ipcMain.handle('retry-failed-downloads', async (event) => {
+    try {
+      await skinDownloader.retryFailedDownloads((progress) => {
+        event.sender.send('download-all-skins-progress', progress)
+      })
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  })
+
   ipcMain.handle('browse-image-file', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
@@ -339,6 +719,8 @@ function setupIpcHandlers(): void {
   // Patcher controls
   ipcMain.handle('run-patcher', async (_, gamePath: string, selectedSkins: string[]) => {
     try {
+      console.log(selectedSkins)
+
       // 0. Filter out base skins when their chromas are selected
       const filteredSkins = selectedSkins.filter((skinKey) => {
         const [champion, skinFile] = skinKey.split('/')
@@ -389,53 +771,183 @@ function setupIpcHandlers(): void {
       }
 
       // 1. Download skins that are not local and get all local paths
-      const skinInfosToProcess = await Promise.all(
+      const skinProcessingErrors: string[] = []
+      const skinInfosToProcess = await Promise.allSettled(
         filteredSkins.map(async (skinKey) => {
           const [champion, skinFile] = skinKey.split('/')
 
           // Handle user-imported skins
           if (skinFile.includes('[User]')) {
             const skinNameWithExt = skinFile.replace('[User] ', '')
-            const skinName = skinNameWithExt.replace(/\.(wad\.client|wad|zip|fantome)$/i, '')
+            // Extract the actual filename without extension more carefully
+            const extMatch = skinNameWithExt.match(/\.(wad\.client|wad|zip|fantome)$/i)
+            const skinName = extMatch
+              ? skinNameWithExt.slice(0, -extMatch[0].length)
+              : skinNameWithExt
+            const fileExt = extMatch ? extMatch[0] : ''
+
+            console.log(
+              `[Patcher] Processing custom mod: champion=${champion}, skinFile=${skinFile}, skinName=${skinName}, fileExt=${fileExt}`
+            )
 
             // First try to find the mod file in mod-files directory
             const modFilesDir = path.join(app.getPath('userData'), 'mod-files')
             const possibleExtensions = ['.wad.client', '.wad', '.zip', '.fantome']
             let modFilePath: string | null = null
 
-            for (const ext of possibleExtensions) {
+            // Try champion-specific paths first
+            // If we already know the extension, try that first
+            const extensionsToTry = fileExt
+              ? [fileExt, ...possibleExtensions.filter((e) => e !== fileExt)]
+              : possibleExtensions
+
+            for (const ext of extensionsToTry) {
               const testPath = path.join(modFilesDir, `${champion}_${skinName}${ext}`)
+              console.log(`[Patcher] Trying path: ${testPath}`)
               try {
                 await fs.promises.access(testPath)
                 modFilePath = testPath
+                console.log(`[Patcher] Found mod at champion-specific path: ${testPath}`)
                 break
-              } catch {
+              } catch (error) {
+                console.log(`[Patcher] Path not found: ${testPath}, error:`, error)
                 // Continue to next extension
+              }
+            }
+
+            // If not found, try Custom_ paths (for mods imported without champion selection)
+            if (!modFilePath) {
+              for (const ext of possibleExtensions) {
+                const customPath = path.join(modFilesDir, `Custom_${skinName}${ext}`)
+                try {
+                  await fs.promises.access(customPath)
+                  modFilePath = customPath
+                  console.log(`[Patcher] Found mod at custom path: ${customPath}`)
+                  break
+                } catch {
+                  // Continue to next extension
+                }
               }
             }
 
             // If not found in mod-files, check legacy mods directory
             if (!modFilePath) {
-              modFilePath = path.join(app.getPath('userData'), 'mods', `${champion}_${skinName}`)
+              // Try champion-specific legacy path
+              const legacyPath = path.join(
+                app.getPath('userData'),
+                'mods',
+                `${champion}_${skinName}`
+              )
+              try {
+                await fs.promises.access(legacyPath)
+                modFilePath = legacyPath
+                console.log(`[Patcher] Found mod at legacy champion path: ${legacyPath}`)
+              } catch {
+                // Try Custom_ legacy path
+                const customLegacyPath = path.join(
+                  app.getPath('userData'),
+                  'mods',
+                  `Custom_${skinName}`
+                )
+                try {
+                  await fs.promises.access(customLegacyPath)
+                  modFilePath = customLegacyPath
+                  console.log(`[Patcher] Found mod at legacy custom path: ${customLegacyPath}`)
+                } catch {
+                  // Not found anywhere
+                  console.error(`[Patcher] Mod file not found for ${champion}/${skinName}`)
+                  modFilePath = null
+                }
+              }
+            }
+
+            if (!modFilePath) {
+              throw new Error(`Custom mod file not found: ${champion}/${skinName}`)
             }
 
             return { localPath: modFilePath }
           }
 
           // Handle remote skins
+          // First check if the skin is already downloaded
+          const downloadedSkins = await skinDownloader.listDownloadedSkins()
+          // Try both the original champion name and URL-decoded version (for champions with spaces)
+          const existingSkin = downloadedSkins.find(
+            (ds) =>
+              (ds.championName === champion || decodeURIComponent(ds.championName) === champion) &&
+              ds.skinName === skinFile
+          )
+
+          if (existingSkin && existingSkin.localPath) {
+            console.log(`[Patcher] Skin already downloaded: ${champion}/${skinFile}`)
+            return { localPath: existingSkin.localPath }
+          }
+
+          // If not downloaded, check if this might be a variant (has special naming patterns)
+          const isLikelyVariant =
+            skinFile.includes('Arcane Fractured') ||
+            skinFile.includes('Elementalist') ||
+            skinFile.includes('GunGoddess') ||
+            skinFile.includes('Gun Goddess') ||
+            skinFile.includes('form') ||
+            skinFile.includes('Hero') ||
+            skinFile.includes('Exalted')
+
+          if (isLikelyVariant) {
+            throw new Error(
+              `Variant skin not found in downloads: ${champion}/${skinFile}. Variants must be downloaded through the UI first.`
+            )
+          }
+
+          // For regular skins, try to download
           const url = `https://github.com/darkseal-org/lol-skins/blob/main/skins/${champion}/${encodeURIComponent(
             skinFile
           )}`
+          console.log(`[Patcher] Downloading skin: ${url}`)
           return skinDownloader.downloadSkin(url)
         })
       )
 
+      // Process Promise.allSettled results
+      const successfulSkins = skinInfosToProcess
+        .filter(
+          (result): result is PromiseFulfilledResult<{ localPath: string }> =>
+            result.status === 'fulfilled'
+        )
+        .map((result) => result.value)
+
+      const failedSkins = skinInfosToProcess
+        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+        .map((result, index) => ({
+          skin: filteredSkins[index],
+          error: result.reason?.message || result.reason
+        }))
+
+      if (failedSkins.length > 0) {
+        failedSkins.forEach(({ skin, error }) => {
+          console.error(`[Patcher] Failed to process ${skin}: ${error}`)
+          skinProcessingErrors.push(`${skin}: ${error}`)
+        })
+      }
+
       // 2. Prepare preset for patcher
+      console.log('[Patcher] Successfully processed skins:', successfulSkins)
+      const validPaths = successfulSkins.map((s) => s.localPath).filter((path) => path != null)
+
+      if (validPaths.length === 0) {
+        console.error('[Patcher] No valid skin paths found!')
+        const errorMessage =
+          skinProcessingErrors.length > 0
+            ? `Failed to find skin files:\n${skinProcessingErrors.join('\n')}`
+            : 'Failed to resolve skin file paths'
+        return { success: false, message: errorMessage }
+      }
+
       const preset = {
         id: 'temp_' + Date.now(),
         name: 'Temporary',
         description: 'Temporary preset for patcher',
-        selectedSkins: skinInfosToProcess.map((s) => s.localPath),
+        selectedSkins: validPaths,
         gamePath,
         noTFT: true,
         ignoreConflict: allowMultipleSkinsPerChampion || false,
@@ -479,9 +991,20 @@ function setupIpcHandlers(): void {
 
         // Convert to the format expected by run-patcher
         const skinKeys = filteredSkins.map((skin) => {
+          // Handle custom mods without champion (old format)
           if (skin.championKey === 'Custom') {
             return `Custom/[User] ${skin.skinName}`
           }
+
+          // Handle custom mods with champion assigned (new format)
+          // These have skinId starting with "custom_[User] "
+          if (skin.skinId.startsWith('custom_[User] ')) {
+            // Extract the filename from skinId after "custom_"
+            const modFileName = skin.skinId.replace('custom_', '')
+            return `${skin.championKey}/${modFileName}`
+          }
+
+          // Regular skins from repository
           // For chromas, append the chroma ID
           // Use proper name priority for downloading from repository: lolSkinsName -> nameEn -> name
           const skinNameToUse = (skin.lolSkinsName || skin.skinNameEn || skin.skinName).replace(
@@ -512,46 +1035,178 @@ function setupIpcHandlers(): void {
         }
 
         // Download skins and apply
-        const skinInfosToProcess = await Promise.all(
+        const skinProcessingErrors: string[] = []
+        const skinInfosToProcess = await Promise.allSettled(
           skinKeys.map(async (skinKey) => {
             const [champion, skinFile] = skinKey.split('/')
 
             if (skinFile.includes('[User]')) {
               const skinNameWithExt = skinFile.replace('[User] ', '')
-              const skinName = skinNameWithExt.replace(/\.(wad\.client|wad|zip|fantome)$/i, '')
+              // Extract the actual filename without extension more carefully
+              const extMatch = skinNameWithExt.match(/\.(wad\.client|wad|zip|fantome)$/i)
+              const skinName = extMatch
+                ? skinNameWithExt.slice(0, -extMatch[0].length)
+                : skinNameWithExt
+              const fileExt = extMatch ? extMatch[0] : ''
+
+              console.log(
+                `[SmartApply] Processing custom mod: champion=${champion}, skinFile=${skinFile}, skinName=${skinName}, fileExt=${fileExt}`
+              )
 
               const modFilesDir = path.join(app.getPath('userData'), 'mod-files')
               const possibleExtensions = ['.wad.client', '.wad', '.zip', '.fantome']
               let modFilePath: string | null = null
 
-              for (const ext of possibleExtensions) {
+              // Try champion-specific paths first
+              // If we already know the extension, try that first
+              const extensionsToTry = fileExt
+                ? [fileExt, ...possibleExtensions.filter((e) => e !== fileExt)]
+                : possibleExtensions
+
+              for (const ext of extensionsToTry) {
                 const testPath = path.join(modFilesDir, `${champion}_${skinName}${ext}`)
+                console.log(`[SmartApply] Trying path: ${testPath}`)
                 try {
                   await fs.promises.access(testPath)
                   modFilePath = testPath
+                  console.log(`[SmartApply] Found mod at champion-specific path: ${testPath}`)
                   break
-                } catch {
+                } catch (error) {
+                  console.log(`[SmartApply] Path not found: ${testPath}, error:`, error)
                   // Continue
                 }
               }
 
+              // If not found, try Custom_ paths (for mods imported without champion selection)
               if (!modFilePath) {
-                modFilePath = path.join(app.getPath('userData'), 'mods', `${champion}_${skinName}`)
+                for (const ext of possibleExtensions) {
+                  const customPath = path.join(modFilesDir, `Custom_${skinName}${ext}`)
+                  try {
+                    await fs.promises.access(customPath)
+                    modFilePath = customPath
+                    console.log(`[SmartApply] Found mod at custom path: ${customPath}`)
+                    break
+                  } catch {
+                    // Continue
+                  }
+                }
+              }
+
+              // If not found in mod-files, check legacy mods directory
+              if (!modFilePath) {
+                // Try champion-specific legacy path
+                const legacyPath = path.join(
+                  app.getPath('userData'),
+                  'mods',
+                  `${champion}_${skinName}`
+                )
+                try {
+                  await fs.promises.access(legacyPath)
+                  modFilePath = legacyPath
+                  console.log(`[SmartApply] Found mod at legacy champion path: ${legacyPath}`)
+                } catch {
+                  // Try Custom_ legacy path
+                  const customLegacyPath = path.join(
+                    app.getPath('userData'),
+                    'mods',
+                    `Custom_${skinName}`
+                  )
+                  try {
+                    await fs.promises.access(customLegacyPath)
+                    modFilePath = customLegacyPath
+                    console.log(`[SmartApply] Found mod at legacy custom path: ${customLegacyPath}`)
+                  } catch {
+                    // Not found anywhere
+                    console.error(`[SmartApply] Mod file not found for ${champion}/${skinName}`)
+                    modFilePath = null
+                  }
+                }
+              }
+
+              if (!modFilePath) {
+                throw new Error(`Custom mod file not found: ${champion}/${skinName}`)
               }
 
               return { localPath: modFilePath }
             }
 
+            // First check if the skin is already downloaded
+            const downloadedSkins = await skinDownloader.listDownloadedSkins()
+            // Try both the original champion name and URL-decoded version (for champions with spaces)
+            const existingSkin = downloadedSkins.find(
+              (ds) =>
+                (ds.championName === champion ||
+                  decodeURIComponent(ds.championName) === champion) &&
+                ds.skinName === skinFile
+            )
+
+            if (existingSkin && existingSkin.localPath) {
+              console.log(`[SmartApply] Skin already downloaded: ${champion}/${skinFile}`)
+              return { localPath: existingSkin.localPath }
+            }
+
+            // If not downloaded, check if this might be a variant (has special naming patterns)
+            const isLikelyVariant =
+              skinFile.includes('Arcane Fractured') ||
+              skinFile.includes('Elementalist') ||
+              skinFile.includes('GunGoddess') ||
+              skinFile.includes('Gun Goddess') ||
+              skinFile.includes('form') ||
+              skinFile.includes('Hero') ||
+              skinFile.includes('Exalted')
+
+            if (isLikelyVariant) {
+              throw new Error(
+                `Variant skin not found in downloads: ${champion}/${skinFile}. Variants must be downloaded through the UI first.`
+              )
+            }
+
+            // For regular skins, try to download
             const url = `https://github.com/darkseal-org/lol-skins/blob/main/skins/${champion}/${encodeURIComponent(skinFile)}`
+            console.log(`[SmartApply] Downloading skin: ${url}`)
             return skinDownloader.downloadSkin(url)
           })
         )
+
+        // Process Promise.allSettled results
+        const successfulSkins = skinInfosToProcess
+          .filter(
+            (result): result is PromiseFulfilledResult<{ localPath: string }> =>
+              result.status === 'fulfilled'
+          )
+          .map((result) => result.value)
+
+        const failedSkins = skinInfosToProcess
+          .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+          .map((result, index) => ({
+            skin: skinKeys[index],
+            error: result.reason?.message || result.reason
+          }))
+
+        if (failedSkins.length > 0) {
+          failedSkins.forEach(({ skin, error }) => {
+            console.error(`[SmartApply] Failed to process ${skin}: ${error}`)
+            skinProcessingErrors.push(`${skin}: ${error}`)
+          })
+        }
+
+        console.log('[SmartApply] Successfully processed skins:', successfulSkins)
+        const validPaths = successfulSkins.map((s) => s.localPath).filter((path) => path != null)
+
+        if (validPaths.length === 0) {
+          console.error('[SmartApply] No valid skin paths found!')
+          const errorMessage =
+            skinProcessingErrors.length > 0
+              ? `Failed to find skin files:\n${skinProcessingErrors.join('\n')}`
+              : 'Failed to resolve skin file paths'
+          return { success: false, message: errorMessage }
+        }
 
         const preset = {
           id: 'temp_' + Date.now(),
           name: 'Temporary',
           description: 'Smart apply preset',
-          selectedSkins: skinInfosToProcess.map((s) => s.localPath),
+          selectedSkins: validPaths,
           gamePath,
           noTFT: true,
           ignoreConflict: false,
@@ -617,9 +1272,16 @@ function setupIpcHandlers(): void {
   // Favorites management
   ipcMain.handle(
     'add-favorite',
-    async (_, championKey: string, skinId: string, skinName: string) => {
+    async (
+      _,
+      championKey: string,
+      skinId: string,
+      skinName: string,
+      chromaId?: string,
+      chromaName?: string
+    ) => {
       try {
-        await favoritesService.addFavorite(championKey, skinId, skinName)
+        await favoritesService.addFavorite(championKey, skinId, skinName, chromaId, chromaName)
         return { success: true }
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -627,18 +1289,24 @@ function setupIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle('remove-favorite', async (_, championKey: string, skinId: string) => {
-    try {
-      await favoritesService.removeFavorite(championKey, skinId)
-      return { success: true }
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  ipcMain.handle(
+    'remove-favorite',
+    async (_, championKey: string, skinId: string, chromaId?: string) => {
+      try {
+        await favoritesService.removeFavorite(championKey, skinId, chromaId)
+        return { success: true }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+      }
     }
-  })
+  )
 
-  ipcMain.handle('is-favorite', async (_, championKey: string, skinId: string) => {
-    return favoritesService.isFavorite(championKey, skinId)
-  })
+  ipcMain.handle(
+    'is-favorite',
+    async (_, championKey: string, skinId: string, chromaId?: string) => {
+      return favoritesService.isFavorite(championKey, skinId, chromaId)
+    }
+  )
 
   ipcMain.handle('get-favorites', async () => {
     try {
@@ -702,7 +1370,14 @@ function setupIpcHandlers(): void {
 
   ipcMain.on('window-close', () => {
     const window = BrowserWindow.getFocusedWindow()
-    if (window) window.close()
+    if (window) {
+      const minimizeToTray = settingsService.get('minimizeToTray')
+      if (minimizeToTray && window === mainWindow) {
+        window.hide()
+      } else {
+        window.close()
+      }
+    }
   })
 
   ipcMain.handle('window-is-maximized', () => {
@@ -723,6 +1398,37 @@ function setupIpcHandlers(): void {
       const { GamePathService } = await import('./services/gamePathService')
       const gamePathService = GamePathService.getInstance()
       await gamePathService.setGamePath(value)
+    }
+
+    // Update tray menu when relevant settings change
+    const trayRelevantSettings = [
+      'minimizeToTray',
+      'leagueClientEnabled',
+      'autoAcceptEnabled',
+      'championDetection',
+      'autoViewSkinsEnabled',
+      'smartApplyEnabled',
+      'autoApplyEnabled',
+      'language'
+    ]
+    if (trayRelevantSettings.includes(key)) {
+      // Update translation service if language changed
+      if (key === 'language') {
+        translationService.setLanguage(value as LanguageCode)
+      }
+      updateTrayMenu()
+    }
+  })
+
+  // System locale detection
+  ipcMain.handle('get-system-locale', async () => {
+    try {
+      // Get Windows system locale
+      const systemLocale = app.getLocale()
+      return { success: true, locale: systemLocale }
+    } catch (error) {
+      console.error('Failed to get system locale:', error)
+      return { success: false, locale: 'en-US' }
     }
   })
 
@@ -800,6 +1506,55 @@ function setupIpcHandlers(): void {
     try {
       const result = await fileImportService.deleteCustomSkin(modPath)
       return result
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  // Skin update handlers
+  ipcMain.handle('check-skin-updates', async (_, skinPaths?: string[]) => {
+    try {
+      let skinInfos: SkinInfo[] | undefined
+
+      if (skinPaths) {
+        // Check updates for specific skins
+        const allSkins = await skinDownloader.listDownloadedSkins()
+        skinInfos = allSkins.filter((skin) => skin.localPath && skinPaths.includes(skin.localPath))
+      }
+
+      const updates = await skinDownloader.checkForSkinUpdates(skinInfos)
+
+      // Convert Map to object for JSON serialization
+      const updatesObj = Object.fromEntries(updates.entries())
+
+      return { success: true, data: updatesObj }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('update-skin', async (_, skinInfo: SkinInfo) => {
+    try {
+      const updatedSkin = await skinDownloader.updateSkin(skinInfo)
+      return { success: true, data: updatedSkin }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('bulk-update-skins', async (_, skinInfos: SkinInfo[]) => {
+    try {
+      const result = await skinDownloader.bulkUpdateSkins(skinInfos)
+      return { success: true, data: result }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('generate-metadata-for-existing-skins', async () => {
+    try {
+      await skinDownloader.generateMetadataForExistingSkins()
+      return { success: true }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
@@ -1150,13 +1905,35 @@ async function showOverlayWithAutoSelectedSkin(championKey: string): Promise<voi
     const autoRandomRaritySkinEnabled = settingsService.get('autoRandomRaritySkinEnabled') || false
     const autoRandomFavoriteSkinEnabled =
       settingsService.get('autoRandomFavoriteSkinEnabled') || false
+    const autoRandomHighestWinRateSkinEnabled =
+      settingsService.get('autoRandomHighestWinRateSkinEnabled') || false
+    const autoRandomHighestPickRateSkinEnabled =
+      settingsService.get('autoRandomHighestPickRateSkinEnabled') || false
+    const autoRandomMostPlayedSkinEnabled =
+      settingsService.get('autoRandomMostPlayedSkinEnabled') || false
     const championDetectionEnabled = settingsService.get('championDetectionEnabled') !== false
+    const inGameOverlayEnabled = settingsService.get('inGameOverlayEnabled') || false
 
     // Check if any auto-random feature is enabled
     const autoRandomEnabled =
-      autoRandomSkinEnabled || autoRandomRaritySkinEnabled || autoRandomFavoriteSkinEnabled
+      autoRandomSkinEnabled ||
+      autoRandomRaritySkinEnabled ||
+      autoRandomFavoriteSkinEnabled ||
+      autoRandomHighestWinRateSkinEnabled ||
+      autoRandomHighestPickRateSkinEnabled ||
+      autoRandomMostPlayedSkinEnabled
 
-    if (!championDetectionEnabled || !autoRandomEnabled) {
+    console.log('[Overlay] Settings check:', {
+      championDetectionEnabled,
+      inGameOverlayEnabled,
+      autoRandomEnabled,
+      autoRandomHighestWinRateSkinEnabled,
+      autoRandomHighestPickRateSkinEnabled,
+      autoRandomMostPlayedSkinEnabled
+    })
+
+    if (!championDetectionEnabled || !autoRandomEnabled || !inGameOverlayEnabled) {
+      console.log('[Overlay] Not showing overlay - missing required settings')
       return
     }
 
@@ -1249,6 +2026,13 @@ function setupLCUConnection(): void {
     // Note: Overlay display is now handled when renderer sends auto-selected skin data
   })
 
+  gameflowMonitor.on('queue-id-detected', (data) => {
+    // Forward early queue ID detection to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send('lcu:queue-id-detected', data)
+    })
+  })
+
   gameflowMonitor.on('ready-check-accepted', () => {
     // Forward to all windows
     BrowserWindow.getAllWindows().forEach((window) => {
@@ -1320,26 +2104,37 @@ function cleanup(): void {
   teamCompositionMonitor.removeAllListeners()
   overlayWindowManager.removeAllListeners()
   autoBanPickService.removeAllListeners()
+
+  // Clean up tray
+  if (tray) {
+    tray.destroy()
+    tray = null
+  }
 }
 
-// Handle app quit events
-app.on('before-quit', () => {
-  cleanup()
-})
+// Handle app quit events - only for primary instance
+if (gotTheLock) {
+  app.on('before-quit', () => {
+    cleanup()
+  })
 
-app.on('window-all-closed', () => {
-  cleanup()
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
+  app.on('window-all-closed', () => {
+    const minimizeToTray = settingsService.get('minimizeToTray')
+    if (!minimizeToTray) {
+      cleanup()
+      if (process.platform !== 'darwin') {
+        app.quit()
+      }
+    }
+  })
 
-app.on('will-quit', (event) => {
-  // Prevent quit until cleanup is done
-  event.preventDefault()
-  cleanup()
-  // Allow quit after cleanup
-  setTimeout(() => {
-    app.exit(0)
-  }, 100)
-})
+  app.on('will-quit', (event) => {
+    // Prevent quit until cleanup is done
+    event.preventDefault()
+    cleanup()
+    // Allow quit after cleanup
+    setTimeout(() => {
+      app.exit(0)
+    }, 100)
+  })
+}

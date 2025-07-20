@@ -91,6 +91,37 @@
     "downloading": "Downloading tools... {{progress}}%",
     "downloadTools": "Download Tools"
   },
+  "downloadAll": {
+    "title": "Download All Skins",
+    "button": "Download All",
+    "optionsTitle": "Download All Skins",
+    "optionsDescription": "Choose which skins to download and configure download settings.",
+    "infoTitle": "Download Information",
+    "infoDescription": "Approximately {{count}} skins will be downloaded (~{{size}}).",
+    "filterOptions": "Filter Options",
+    "excludeChromas": "Exclude Chromas",
+    "excludeChromasDesc": "Skip chroma variants to reduce download size",
+    "excludeVariants": "Exclude Variants",
+    "excludeVariantsDesc": "Skip prestige editions and special variants",
+    "excludeLegacy": "Exclude Legacy Skins",
+    "excludeLegacyDesc": "Skip legacy and limited-time skins",
+    "excludeEsports": "Exclude Esports Skins",
+    "excludeEsportsDesc": "Skip championship and professional team skins",
+    "onlyFavorites": "Only Favorites",
+    "onlyFavoritesDesc": "Download only your favorited skins",
+    "performanceOptions": "Performance Options",
+    "concurrency": "Concurrent Downloads",
+    "concurrencyDesc": "Number of simultaneous downloads (higher = faster but more resource intensive)",
+    "startDownload": "Start Download",
+    "progress": "{{completed}} of {{total}} skins",
+    "speed": "Speed",
+    "timeRemaining": "Time remaining",
+    "failedDownloads": "{{count}} failed downloads",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "completed": "Download Complete"
+  },
   "settings": {
     "title": "Settings",
     "description": "Configure your app preferences",
@@ -154,6 +185,18 @@
       "title": "Auto Random Favorite Skin",
       "description": "Automatically select a random skin from your favorites when a champion is detected"
     },
+    "autoRandomHighestWinRateSkin": {
+      "title": "Auto Random Highest Win Rate Skin",
+      "description": "Automatically select a random skin from the top 3 highest win rate skins"
+    },
+    "autoRandomHighestPickRateSkin": {
+      "title": "Auto Random Highest Pick Rate Skin",
+      "description": "Automatically select a random skin from the top 3 most popular skins"
+    },
+    "autoRandomMostPlayedSkin": {
+      "title": "Auto Random Most Played Skin",
+      "description": "Automatically select a random skin from the top 3 most played skins"
+    },
     "inGameOverlay": {
       "title": "In-Game Overlay",
       "description": "Pre-attach overlay to League client for faster skin notifications (requires any Auto Random feature)"
@@ -167,13 +210,25 @@
       "description": "Automatically fix missing health bars, materials, and VFX when importing mods"
     },
     "tabs": {
+      "general": "General",
       "leagueClient": "League Client",
       "skinManagement": "Skin Management"
     },
     "randomSkinSelection": {
       "title": "Random Skin Selection",
       "none": "Disabled"
+    },
+    "minimizeToTray": {
+      "title": "Minimize to Tray",
+      "description": "Hide the app to system tray instead of closing when clicking the close button"
     }
+  },
+  "tray": {
+    "show": "Show Chommicha",
+    "hide": "Hide Chommicha",
+    "language": "Language",
+    "openSettings": "Open Settings",
+    "quit": "Quit Chommicha"
   },
   "fileUpload": {
     "uploadButton": "Upload Custom Mod",
@@ -220,12 +275,15 @@
     "fixError": "An error occurred while fixing the mod",
     "saveChanges": "Save Changes"
   },
-  "cancel": "Cancel",
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
   "success": "Success",
   "error": "Error",
   "update": {
     "available": "Update Available",
-    "description": "A new version of chommicha is available for download.",
+    "description": "A new version of Chommicha is available for download.",
     "whatsNew": "What's New",
     "downloading": "Downloading...",
     "updateNow": "Update Now",
@@ -253,6 +311,10 @@
     "selectChroma": "Select Chroma for {{skinName}}",
     "chooseChroma_one": "Choose from {{count}} available chroma",
     "chooseChroma_other": "Choose from {{count}} available chromas",
+    "selectVariant": "Select Variant for {{skinName}}",
+    "chooseVariant": "Choose from {{count}} available {{type}}",
+    "exaltedVariant": "Exalted variants",
+    "formVariant": "Form variants",
     "mySkins": "My Skins",
     "roomSkins": "Room Skins",
     "manage": "Manage",
@@ -278,6 +340,14 @@
     "skinNumAsc": "Skin # (Low to High)",
     "skinNumDesc": "Skin # (High to Low)",
     "championName": "Champion Name",
+    "rarityAsc": "Rarity (Low to High)",
+    "rarityDesc": "Rarity (High to Low)",
+    "winRateDesc": "Win Rate (High to Low)",
+    "winRateAsc": "Win Rate (Low to High)",
+    "pickRateDesc": "Pick Rate (High to Low)",
+    "pickRateAsc": "Pick Rate (Low to High)",
+    "totalGamesDesc": "Most Played",
+    "totalGamesAsc": "Least Played",
     "rarity": "Rarity",
     "rarities": {
       "epic": "Epic",

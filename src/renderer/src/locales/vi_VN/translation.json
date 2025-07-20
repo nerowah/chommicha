@@ -90,6 +90,37 @@
     "downloading": "Đang tải công cụ... {{progress}}%",
     "downloadTools": "Tải Công Cụ"
   },
+  "downloadAll": {
+    "title": "Download All Skins",
+    "button": "Download All",
+    "optionsTitle": "Download All Skins",
+    "optionsDescription": "Choose which skins to download and configure download settings.",
+    "infoTitle": "Download Information",
+    "infoDescription": "Approximately {{count}} skins will be downloaded (~{{size}}).",
+    "filterOptions": "Filter Options",
+    "excludeChromas": "Exclude Chromas",
+    "excludeChromasDesc": "Skip chroma variants to reduce download size",
+    "excludeVariants": "Exclude Variants",
+    "excludeVariantsDesc": "Skip prestige editions and special variants",
+    "excludeLegacy": "Exclude Legacy Skins",
+    "excludeLegacyDesc": "Skip legacy and limited-time skins",
+    "excludeEsports": "Exclude Esports Skins",
+    "excludeEsportsDesc": "Skip championship and professional team skins",
+    "onlyFavorites": "Only Favorites",
+    "onlyFavoritesDesc": "Download only your favorited skins",
+    "performanceOptions": "Performance Options",
+    "concurrency": "Concurrent Downloads",
+    "concurrencyDesc": "Number of simultaneous downloads (higher = faster but more resource intensive)",
+    "startDownload": "Start Download",
+    "progress": "{{completed}} of {{total}} skins",
+    "speed": "Speed",
+    "timeRemaining": "Time remaining",
+    "failedDownloads": "{{count}} failed downloads",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "completed": "Download Complete"
+  },
   "settings": {
     "title": "Cài đặt",
     "description": "Cấu hình tùy chọn ứng dụng",
@@ -153,6 +184,22 @@
       "title": "Tự động chọn skin yêu thích ngẫu nhiên",
       "description": "Tự động chọn một skin ngẫu nhiên từ danh sách yêu thích của bạn khi phát hiện tướng"
     },
+    "autoRandomHighestWinRateSkin": {
+      "title": "Tự động chọn ngẫu nhiên skin tỷ lệ thắng cao",
+      "description": "Tự động chọn ngẫu nhiên một skin từ top 3 skin có tỷ lệ thắng cao nhất"
+    },
+    "autoRandomHighestPickRateSkin": {
+      "title": "Tự động chọn ngẫu nhiên skin phổ biến nhất",
+      "description": "Tự động chọn ngẫu nhiên một skin từ top 3 skin được chọn nhiều nhất"
+    },
+    "autoRandomMostPlayedSkin": {
+      "title": "Tự động chọn ngẫu nhiên skin được chơi nhiều nhất",
+      "description": "Tự động chọn ngẫu nhiên một skin từ top 3 skin được chơi nhiều nhất"
+    },
+    "inGameOverlay": {
+      "title": "Hiển thị trong game",
+      "description": "Gắn sẵn overlay vào League client để hiển thị thông báo skin nhanh hơn (yêu cầu bật tính năng Tự động chọn ngẫu nhiên)"
+    },
     "allowMultipleSkinsPerChampion": {
       "title": "Cho phép nhiều skin cho mỗi tướng",
       "description": "Bật để sử dụng nhiều skin cho cùng một tướng đồng thời"
@@ -162,13 +209,25 @@
       "description": "Tự động sửa lỗi thanh máu thiếu, vật liệu thiếu và hiệu ứng VFX khi nhập mod"
     },
     "tabs": {
+      "general": "Chung",
       "leagueClient": "League Client",
       "skinManagement": "Quản lý Trang phục"
     },
     "randomSkinSelection": {
       "title": "Chọn Trang phục Ngẫu nhiên",
       "none": "Tắt"
+    },
+    "minimizeToTray": {
+      "title": "Thu nhỏ vào khay hệ thống",
+      "description": "Ẩn ứng dụng vào khay hệ thống thay vì đóng khi nhấn nút đóng"
     }
+  },
+  "tray": {
+    "show": "Hiện Chommicha",
+    "hide": "Ẩn Chommicha",
+    "language": "Ngôn ngữ",
+    "openSettings": "Mở Cài đặt",
+    "quit": "Thoát Chommicha"
   },
   "fileUpload": {
     "uploadButton": "Tải Lên Mod Tùy Chỉnh",
@@ -215,12 +274,16 @@
     "fixError": "Đã xảy ra lỗi khi sửa mod",
     "saveChanges": "Lưu Thay Đổi"
   },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
   "cancel": "Hủy",
   "success": "Thành công",
   "error": "Lỗi",
   "update": {
     "available": "Có bản cập nhật",
-    "description": "Đã có phiên bản mới của chommicha để tải xuống.",
+    "description": "Đã có phiên bản mới của Chommicha để tải xuống.",
     "whatsNew": "Có gì mới",
     "downloading": "Đang tải xuống...",
     "updateNow": "Cập nhật ngay",
@@ -245,6 +308,10 @@
     "chromas": "{{count}} chroma có sẵn",
     "selectChroma": "Chọn Chroma cho {{skinName}}",
     "chooseChroma": "Chọn từ {{count}} chroma có sẵn",
+    "selectVariant": "Chọn Biến thể cho {{skinName}}",
+    "chooseVariant": "Chọn từ {{count}} {{type}} có sẵn",
+    "exaltedVariant": "Biến thể thăng thiên",
+    "formVariant": "Biến thể hình dạng",
     "mySkins": "Trang phục của tôi",
     "roomSkins": "Trang phục trong phòng",
     "manage": "Quản lý",
@@ -270,6 +337,14 @@
     "skinNumAsc": "Số trang phục (Thấp đến Cao)",
     "skinNumDesc": "Số trang phục (Cao đến Thấp)",
     "championName": "Tên tướng",
+    "rarityAsc": "Độ hiếm (Thấp đến Cao)",
+    "rarityDesc": "Độ hiếm (Cao đến Thấp)",
+    "winRateDesc": "Tỷ lệ thắng (Cao đến Thấp)",
+    "winRateAsc": "Tỷ lệ thắng (Thấp đến Cao)",
+    "pickRateDesc": "Tỷ lệ chọn (Cao đến Thấp)",
+    "pickRateAsc": "Tỷ lệ chọn (Thấp đến Cao)",
+    "totalGamesDesc": "Được chơi nhiều nhất",
+    "totalGamesAsc": "Được chơi ít nhất",
     "rarity": "Độ hiếm",
     "rarities": {
       "epic": "Sử thi",

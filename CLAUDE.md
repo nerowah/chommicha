@@ -4,34 +4,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-chommicha is an Electron-based desktop application for managing League of Legends skins. It uses React with TypeScript for the UI and follows a standard three-process Electron architecture. The application is not affiliated with Riot Games and skins are client-side only.
+Chommicha is an Electron-based desktop application for managing League of Legends skins. It uses React with TypeScript for the UI and follows a standard three-process Electron architecture. The application is not affiliated with Riot Games and skins are client-side only.
 
 ## Common Development Commands
 
 ```bash
-# Install dependencies (use pnpm, npm, or bun)
+# Install dependencies (always use pnpm)
 pnpm install
 
 # Run in development mode
-pnpm run dev
+npm run dev
 
 # Type checking (runs both node and web checks)
-pnpm run typecheck
+npm run typecheck
 
 # Linting
-pnpm run lint
+npm run lint
 
 # Format code with Prettier
-pnpm run format
+npm run format
 
 # Build for Windows
-pnpm run build:win
+npm run build:win
 
 # Build without packaging (for testing)
-pnpm run build:unpack
+npm run build:unpack
 
 # Fetch champion data from Riot API
-pnpm run fetch-champion-data
+npm run fetch-champion-data
 ```
 
 ## Architecture Overview
@@ -102,3 +102,20 @@ All services are in `src/main/services/`:
 - Prettier configuration: single quotes, no semicolons, 100 char width
 - ESLint with Electron toolkit config
 - Full TypeScript coverage across all processes
+
+## Development Workflow
+
+After implementing any feature or making significant changes, always run the following commands in order:
+
+```bash
+# 1. Type checking - ensures TypeScript compilation passes
+npm run typecheck
+
+# 2. Linting - checks code quality and style
+npm run lint
+
+# 3. Code formatting - ensures consistent formatting
+npm run format
+```
+
+These commands help maintain code quality and catch potential issues early. Run them before committing changes or considering a feature complete.

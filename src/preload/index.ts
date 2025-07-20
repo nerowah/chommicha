@@ -13,6 +13,22 @@ const api = {
   deleteSkin: (championName: string, skinName: string) =>
     ipcRenderer.invoke('delete-skin', championName, skinName),
 
+  // Batch download management
+  downloadAllSkins: (
+    skinUrls: string[],
+    options?: { excludeChromas?: boolean; concurrency?: number }
+  ) => ipcRenderer.invoke('download-all-skins', skinUrls, options),
+  pauseBatchDownload: () => ipcRenderer.invoke('pause-batch-download'),
+  resumeBatchDownload: () => ipcRenderer.invoke('resume-batch-download'),
+  cancelBatchDownload: () => ipcRenderer.invoke('cancel-batch-download'),
+  getBatchDownloadState: () => ipcRenderer.invoke('get-batch-download-state'),
+  onDownloadAllSkinsProgress: (callback: (progress: any) => void) => {
+    const handler = (_: any, progress: any) => callback(progress)
+    ipcRenderer.on('download-all-skins-progress', handler)
+    return () => ipcRenderer.removeListener('download-all-skins-progress', handler)
+  },
+  retryFailedDownloads: () => ipcRenderer.invoke('retry-failed-downloads'),
+
   // File import
   importSkinFile: (
     filePath: string,
@@ -55,12 +71,17 @@ const api = {
   getChromasForSkin: (skinId: string) => ipcRenderer.invoke('get-chromas-for-skin', skinId),
 
   // Favorites
-  addFavorite: (championKey: string, skinId: string, skinName: string) =>
-    ipcRenderer.invoke('add-favorite', championKey, skinId, skinName),
-  removeFavorite: (championKey: string, skinId: string) =>
-    ipcRenderer.invoke('remove-favorite', championKey, skinId),
-  isFavorite: (championKey: string, skinId: string) =>
-    ipcRenderer.invoke('is-favorite', championKey, skinId),
+  addFavorite: (
+    championKey: string,
+    skinId: string,
+    skinName: string,
+    chromaId?: string,
+    chromaName?: string
+  ) => ipcRenderer.invoke('add-favorite', championKey, skinId, skinName, chromaId, chromaName),
+  removeFavorite: (championKey: string, skinId: string, chromaId?: string) =>
+    ipcRenderer.invoke('remove-favorite', championKey, skinId, chromaId),
+  isFavorite: (championKey: string, skinId: string, chromaId?: string) =>
+    ipcRenderer.invoke('is-favorite', championKey, skinId, chromaId),
   getFavorites: () => ipcRenderer.invoke('get-favorites'),
   getFavoritesByChampion: (championKey: string) =>
     ipcRenderer.invoke('get-favorites-by-champion', championKey),
@@ -84,6 +105,7 @@ const api = {
   // Settings
   getSettings: (key?: string) => ipcRenderer.invoke('get-settings', key),
   setSettings: (key: string, value: any) => ipcRenderer.invoke('set-settings', key, value),
+  getSystemLocale: () => ipcRenderer.invoke('get-system-locale'),
 
   // Auto-updater
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
@@ -131,6 +153,13 @@ const api = {
   editCustomSkin: (modPath: string, newName: string, newImagePath?: string) =>
     ipcRenderer.invoke('edit-custom-skin', modPath, newName, newImagePath),
   deleteCustomSkin: (modPath: string) => ipcRenderer.invoke('delete-custom-skin', modPath),
+
+  // Skin update management
+  checkSkinUpdates: (skinPaths?: string[]) => ipcRenderer.invoke('check-skin-updates', skinPaths),
+  updateSkin: (skinInfo: any) => ipcRenderer.invoke('update-skin', skinInfo),
+  bulkUpdateSkins: (skinInfos: any[]) => ipcRenderer.invoke('bulk-update-skins', skinInfos),
+  generateMetadataForExistingSkins: () =>
+    ipcRenderer.invoke('generate-metadata-for-existing-skins'),
 
   // Patcher events
   onPatcherStatus: (callback: (status: string) => void) => {
@@ -205,6 +234,11 @@ const api = {
     ipcRenderer.on('lcu:ready-check-accepted', callback)
     return () => ipcRenderer.removeListener('lcu:ready-check-accepted', callback)
   },
+  onLcuQueueIdDetected: (callback: (data: { queueId: number }) => void) => {
+    const handler = (_: any, data: any) => callback(data)
+    ipcRenderer.on('lcu:queue-id-detected', handler)
+    return () => ipcRenderer.removeListener('lcu:queue-id-detected', handler)
+  },
 
   // Team Composition APIs
   getTeamComposition: () => ipcRenderer.invoke('team:get-composition'),
@@ -277,6 +311,24 @@ const api = {
     const handler = (_: any, message: string) => callback(message)
     ipcRenderer.on('fix-mod-progress', handler)
     return () => ipcRenderer.removeListener('fix-mod-progress', handler)
+  },
+
+  // Settings change events from tray
+  onSettingsChanged: (callback: (key: string, value: any) => void) => {
+    const handler = (_: any, key: string, value: any) => callback(key, value)
+    ipcRenderer.on('settings-changed', handler)
+    return () => ipcRenderer.removeListener('settings-changed', handler)
+  },
+
+  onOpenSettings: (callback: () => void) => {
+    ipcRenderer.on('open-settings', callback)
+    return () => ipcRenderer.removeListener('open-settings', callback)
+  },
+
+  onLanguageChanged: (callback: (language: string) => void) => {
+    const handler = (_: any, language: string) => callback(language)
+    ipcRenderer.on('language-changed', handler)
+    return () => ipcRenderer.removeListener('language-changed', handler)
   }
 }
 

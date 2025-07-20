@@ -8,6 +8,7 @@ import { p2pService } from '../services/p2pService'
 import { p2pFileTransferService } from '../services/p2pFileTransferService'
 import { Badge } from './ui/badge'
 import { useSmartSkinApply } from '../hooks/useSmartSkinApply'
+import { generateSkinFilename } from '../../../shared/utils/skinFilename'
 
 interface ExtendedSelectedSkin extends SelectedSkin {
   customModInfo?: {
@@ -43,6 +44,17 @@ interface SelectedSkinsDrawerProps {
           chromaPath: string
           colors: string[]
         }>
+        variants?: {
+          type: string
+          items: Array<{
+            id: string
+            name: string
+            displayName?: string
+            githubUrl: string
+            downloadUrl?: string
+            imageUrl?: string
+          }>
+        }
       }>
     }>
   }
@@ -137,12 +149,24 @@ export const SelectedSkinsDrawer: React.FC<SelectedSkinsDrawerProps> = ({
   // Load custom images for selected custom skins
   useEffect(() => {
     const loadCustomImages = async () => {
-      const customSkins = selectedSkins.filter((s) => s.championKey === 'Custom')
+      // Filter for both types of custom skins
+      const customSkins = selectedSkins.filter(
+        (s) => s.championKey === 'Custom' || s.skinId.startsWith('custom_[User] ')
+      )
 
       for (const skin of customSkins) {
-        const modPath = downloadedSkins.find(
-          (ds) => ds.championName === 'Custom' && ds.skinName.includes(skin.skinName)
-        )?.localPath
+        let modPath: string | undefined
+
+        if (skin.championKey === 'Custom') {
+          // Old format: Custom champion
+          modPath = downloadedSkins.find(
+            (ds) => ds.championName === 'Custom' && ds.skinName.includes(skin.skinName)
+          )?.localPath
+        } else if (skin.skinId.startsWith('custom_[User] ')) {
+          // New format: Custom mod with champion assigned
+          const modFileName = skin.skinId.replace('custom_', '')
+          modPath = downloadedSkins.find((ds) => ds.skinName === modFileName)?.localPath
+        }
 
         if (modPath && !customImages[modPath]) {
           const result = await window.api.getCustomSkinImage(modPath)
@@ -183,6 +207,20 @@ export const SelectedSkinsDrawer: React.FC<SelectedSkinsDrawerProps> = ({
   }
 
   const getSkinImageUrl = (skin: SelectedSkin) => {
+    // Check if it's a variant and we have variant data
+    if (skin.variantId && championData) {
+      const champion = championData.champions.find((c) => c.key === skin.championKey)
+      if (champion) {
+        const skinData = champion.skins.find((s) => s.id === skin.skinId)
+        if (skinData?.variants) {
+          const variant = skinData.variants.items.find((v) => v.id === skin.variantId)
+          if (variant && variant.imageUrl) {
+            return variant.imageUrl
+          }
+        }
+      }
+    }
+
     // Check if it's a chroma and we have chroma data
     if (skin.chromaId && championData) {
       const champion = championData.champions.find((c) => c.key === skin.championKey)
@@ -197,11 +235,20 @@ export const SelectedSkinsDrawer: React.FC<SelectedSkinsDrawerProps> = ({
       }
     }
 
-    if (skin.championKey === 'Custom') {
-      // Find the mod path for this custom skin
-      const modPath = downloadedSkins.find(
-        (ds) => ds.championName === 'Custom' && ds.skinName.includes(skin.skinName)
-      )?.localPath
+    // Check for custom mods (both old and new format)
+    if (skin.championKey === 'Custom' || skin.skinId.startsWith('custom_[User] ')) {
+      let modPath: string | undefined
+
+      if (skin.championKey === 'Custom') {
+        // Old format: Custom champion
+        modPath = downloadedSkins.find(
+          (ds) => ds.championName === 'Custom' && ds.skinName.includes(skin.skinName)
+        )?.localPath
+      } else {
+        // New format: Custom mod with champion assigned
+        const modFileName = skin.skinId.replace('custom_', '')
+        modPath = downloadedSkins.find((ds) => ds.skinName === modFileName)?.localPath
+      }
 
       if (modPath && customImages[modPath]) {
         return customImages[modPath]
@@ -214,6 +261,21 @@ export const SelectedSkinsDrawer: React.FC<SelectedSkinsDrawerProps> = ({
   }
 
   const getSkinDisplayName = (skin: SelectedSkin) => {
+    if (skin.variantId && championData) {
+      // Try to find the variant name from champion data
+      const champion = championData.champions.find((c) => c.key === skin.championKey)
+      if (champion) {
+        const skinData = champion.skins.find((s) => s.id === skin.skinId)
+        if (skinData?.variants) {
+          const variant = skinData.variants.items.find((v) => v.id === skin.variantId)
+          if (variant) {
+            return variant.displayName || variant.name
+          }
+        }
+      }
+      // Fallback to skin name + variant ID
+      return `${skin.skinName} (${skin.variantId})`
+    }
     if (skin.chromaId && championData) {
       // Try to find the chroma name from champion data
       const champion = championData.champions.find((c) => c.key === skin.championKey)
@@ -232,38 +294,53 @@ export const SelectedSkinsDrawer: React.FC<SelectedSkinsDrawerProps> = ({
     return skin.skinName
   }
 
-  const isSkinDownloaded = (skin: SelectedSkin) => {
-    // Custom skins are always "downloaded" since they're user imports
-    if (skin.championKey === 'Custom') {
+  const isSkinDownloaded = (skin: SelectedSkin): boolean => {
+    // Handle custom skins
+    if (skin.championKey === 'Custom' || skin.skinId.startsWith('custom_[User] ')) {
       return true
     }
 
-    // Look up the actual skin data to get the correct name (lolSkinsName > nameEn > name)
-    let actualName = skin.skinName
-    if (championData) {
-      const champion = championData.champions.find((c) => c.key === skin.championKey)
-      if (champion) {
-        const actualSkin = champion.skins.find((s) => s.id === skin.skinId)
-        if (actualSkin) {
-          actualName = actualSkin.lolSkinsName || actualSkin.nameEn || actualSkin.name
-        }
+    // Use stored filename if available
+    if (skin.downloadedFilename) {
+      return downloadedSkins.some((ds) => ds.skinName === skin.downloadedFilename)
+    }
+
+    // Generate filename for comparison
+    const skinFileName = getSkinFileName(skin)
+
+    // Check if skin is downloaded
+    return downloadedSkins.some((ds) => ds.skinName === skinFileName)
+  }
+
+  const getSkinFileName = (skin: SelectedSkin): string => {
+    // Try to find actual skin data from championData
+    const actualSkinData = findActualSkinData(skin)
+
+    if (actualSkinData && skin.variantId && actualSkinData.variants) {
+      // Handle variant skins
+      const variant = actualSkinData.variants.items.find((v) => v.id === skin.variantId)
+      if (variant && (variant.downloadUrl || variant.githubUrl)) {
+        const url = variant.downloadUrl || variant.githubUrl
+        const urlParts = url.split('/')
+        return decodeURIComponent(urlParts[urlParts.length - 1])
       }
     }
 
-    // Use the actual name for file checking
-    const baseName = actualName.replace(/:/g, '')
+    // Use centralized filename generation
+    return generateSkinFilename({
+      ...(actualSkinData || { name: skin.skinName }),
+      chromaId: skin.chromaId,
+      variantId: skin.variantId
+    })
+  }
 
-    if (skin.chromaId) {
-      const chromaFileName = `${baseName} ${skin.chromaId}.zip`
-      return downloadedSkins.some(
-        (ds) => ds.championName === skin.championKey && ds.skinName === chromaFileName
-      )
-    } else {
-      const skinFileName = `${baseName}.zip`
-      return downloadedSkins.some(
-        (ds) => ds.championName === skin.championKey && ds.skinName === skinFileName
-      )
-    }
+  const findActualSkinData = (skin: SelectedSkin) => {
+    if (!championData) return null
+
+    const champion = championData.champions.find((c) => c.key === skin.championKey)
+    if (!champion) return null
+
+    return champion.skins.find((s) => s.id === skin.skinId)
   }
 
   const applySkinFromPeer = async (skin: ExtendedSelectedSkin, peerId: string) => {
@@ -278,11 +355,19 @@ export const SelectedSkinsDrawer: React.FC<SelectedSkinsDrawerProps> = ({
     if (isAlreadySelected) return
 
     // Check if this is a custom skin that needs file transfer
-    if (skin.championKey === 'Custom' && skin.customModInfo?.supportsTransfer) {
+    const isCustomMod = skin.championKey === 'Custom' || skin.skinId.startsWith('custom_[User] ')
+    if (isCustomMod && skin.customModInfo?.supportsTransfer) {
       // Check if we already have this mod locally
-      const localMod = downloadedSkins.find(
-        (ds) => ds.championName === 'Custom' && ds.skinName.includes(skin.skinName)
-      )
+      let localMod
+      if (skin.championKey === 'Custom') {
+        localMod = downloadedSkins.find(
+          (ds) => ds.championName === 'Custom' && ds.skinName.includes(skin.skinName)
+        )
+      } else {
+        // Custom mod with champion
+        const modFileName = skin.skinId.replace('custom_', '')
+        localMod = downloadedSkins.find((ds) => ds.skinName === modFileName)
+      }
 
       if (!localMod) {
         // Need to request file transfer

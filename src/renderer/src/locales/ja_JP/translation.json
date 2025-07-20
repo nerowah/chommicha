@@ -89,12 +89,44 @@
     "downloading": "ツールをダウンロード中... {{progress}}%",
     "downloadTools": "ツールをダウンロード"
   },
+  "downloadAll": {
+    "title": "Download All Skins",
+    "button": "Download All",
+    "optionsTitle": "Download All Skins",
+    "optionsDescription": "Choose which skins to download and configure download settings.",
+    "infoTitle": "Download Information",
+    "infoDescription": "Approximately {{count}} skins will be downloaded (~{{size}}).",
+    "filterOptions": "Filter Options",
+    "excludeChromas": "Exclude Chromas",
+    "excludeChromasDesc": "Skip chroma variants to reduce download size",
+    "excludeVariants": "Exclude Variants",
+    "excludeVariantsDesc": "Skip prestige editions and special variants",
+    "excludeLegacy": "Exclude Legacy Skins",
+    "excludeLegacyDesc": "Skip legacy and limited-time skins",
+    "excludeEsports": "Exclude Esports Skins",
+    "excludeEsportsDesc": "Skip championship and professional team skins",
+    "onlyFavorites": "Only Favorites",
+    "onlyFavoritesDesc": "Download only your favorited skins",
+    "performanceOptions": "Performance Options",
+    "concurrency": "Concurrent Downloads",
+    "concurrencyDesc": "Number of simultaneous downloads (higher = faster but more resource intensive)",
+    "startDownload": "Start Download",
+    "progress": "{{completed}} of {{total}} skins",
+    "speed": "Speed",
+    "timeRemaining": "Time remaining",
+    "failedDownloads": "{{count}} failed downloads",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "completed": "Download Complete"
+  },
   "settings": {
     "gamePath": "ゲームパス",
     "language": "言語",
     "theme": "テーマ",
     "notifications": "通知",
     "tabs": {
+      "general": "一般",
       "leagueClient": "リーグクライアント",
       "skinManagement": "スキン管理"
     },
@@ -102,6 +134,18 @@
       "title": "ランダムスキン選択",
       "none": "無効"
     },
+    "minimizeToTray": {
+      "title": "トレイに最小化",
+      "description": "閉じるボタンをクリックしたとき、アプリを閉じる代わりにシステムトレイに非表示にする"
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "description": "アプリの設定を構成する",
+    "gamePath": "ゲームパス",
+    "language": "言語",
+    "theme": "テーマ",
+    "notifications": "通知",
     "leagueClient": {
       "title": "リーグクライアント統合",
       "description": "League of Legendsクライアントと連携する機能を有効にする"
@@ -158,6 +202,22 @@
       "title": "自動ランダムお気に入りスキン",
       "description": "チャンピオンが検出された時にお気に入りからランダムなスキンを自動的に選択"
     },
+    "autoRandomHighestWinRateSkin": {
+      "title": "自動ランダム高勝率スキン",
+      "description": "勝率の高い上位3つのスキンからランダムに選択します"
+    },
+    "autoRandomHighestPickRateSkin": {
+      "title": "自動ランダム高ピック率スキン",
+      "description": "最も人気のある上位3つのスキンからランダムに選択します"
+    },
+    "autoRandomMostPlayedSkin": {
+      "title": "自動ランダム最多使用スキン",
+      "description": "最も使用されている上位3つのスキンからランダムに選択します"
+    },
+    "inGameOverlay": {
+      "title": "ゲーム内オーバーレイ",
+      "description": "スキン通知を高速化するためにLeagueクライアントにオーバーレイを事前アタッチ（自動ランダム機能が必要）"
+    },
     "allowMultipleSkinsPerChampion": {
       "title": "複数のスキンを同じチャンピオンに許可",
       "description": "有効にすると、同じチャンピオンに複数のスキンを同時に使用できます"
@@ -166,6 +226,13 @@
       "title": "インポート時にMODの問題を自動修正",
       "description": "MODをインポートする際に不足しているヘルスバー、マテリアル、VFXエフェクトを自動的に修正"
     }
+  },
+  "tray": {
+    "show": "Chommichaを表示",
+    "hide": "Chommichaを非表示",
+    "language": "言語",
+    "openSettings": "設定を開く",
+    "quit": "Chommichaを終了"
   },
   "errors": {
     "generic": "エラーが発生しました",
@@ -221,12 +288,16 @@
     "fixError": "MODの修正中にエラーが発生しました",
     "saveChanges": "変更を保存"
   },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
   "cancel": "キャンセル",
   "success": "成功",
   "error": "エラー",
   "update": {
     "available": "アップデート利用可能",
-    "description": "chommichaの新しいバージョンがダウンロード可能です。",
+    "description": "Chommichaの新しいバージョンがダウンロード可能です。",
     "whatsNew": "新機能",
     "downloading": "ダウンロード中...",
     "updateNow": "今すぐ更新",
@@ -254,6 +325,10 @@
     "selectChroma": "{{skinName}}のクロマを選択",
     "chooseChroma_one": "{{count}}個の利用可能なクロマから選択",
     "chooseChroma_other": "{{count}}個の利用可能なクロマから選択",
+    "selectVariant": "{{skinName}}のバリエーションを選択",
+    "chooseVariant": "{{count}}個の利用可能な{{type}}から選択",
+    "exaltedVariant": "崇高バリエーション",
+    "formVariant": "フォームバリエーション",
     "mySkins": "マイスキン",
     "roomSkins": "ルームスキン",
     "manage": "管理",
@@ -279,6 +354,14 @@
     "skinNumAsc": "スキン番号 (昇順)",
     "skinNumDesc": "スキン番号 (降順)",
     "championName": "チャンピオン名",
+    "rarityAsc": "レアリティ (低→高)",
+    "rarityDesc": "レアリティ (高→低)",
+    "winRateDesc": "勝率 (高→低)",
+    "winRateAsc": "勝率 (低→高)",
+    "pickRateDesc": "ピック率 (高→低)",
+    "pickRateAsc": "ピック率 (低→高)",
+    "totalGamesDesc": "プレイ回数 (多→少)",
+    "totalGamesAsc": "プレイ回数 (少→多)",
     "rarity": "レアリティ",
     "rarities": {
       "epic": "エピック",

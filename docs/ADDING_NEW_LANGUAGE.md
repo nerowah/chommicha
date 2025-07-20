@@ -1,10 +1,10 @@
-# Adding a New Language to chommicha
+# Adding a New Language to Chommicha
 
-This guide explains how to add a new language to the chommicha application, covering both UI translations and champion data localization.
+This guide explains how to add a new language to the Chommicha application, covering both UI translations and champion data localization.
 
 ## Overview
 
-chommicha uses [i18next](https://www.i18next.com/) for internationalization and supports multiple languages for:
+Chommicha uses [i18next](https://www.i18next.com/) for internationalization and supports multiple languages for:
 
 - **UI translations**: All interface text, buttons, messages, etc.
 - **Champion data**: Champion names, skin names, and descriptions from League of Legends

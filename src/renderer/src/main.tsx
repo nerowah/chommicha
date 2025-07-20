@@ -10,7 +10,7 @@ import { getThemeById, defaultLightTheme, defaultDarkTheme } from './themes/them
 import { applyTheme } from './themes/utils'
 
 // Apply initial theme based on stored preference or system preference
-const storedConfig = localStorage.getItem('chommicha-theme-config')
+const storedConfig = localStorage.getItem('Chommicha-theme-config')
 let initialTheme = defaultLightTheme
 
 if (storedConfig) {

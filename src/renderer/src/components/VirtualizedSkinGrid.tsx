@@ -5,7 +5,9 @@ import type { SelectedSkin } from '../store/atoms'
 import { isOldFormatCustomId } from '../utils/customModId'
 import { ChromaColorPie } from './ChromaColorPie'
 import { ChromaSelectionDialog } from './ChromaSelectionDialog'
+import { VariantSelectionDialog } from './VariantSelectionDialog'
 import { Button } from './ui/button'
+import { generateSkinFilename } from '../../../shared/utils/skinFilename'
 
 interface VirtualizedSkinGridProps {
   skins: Array<{ champion: Champion; skin: Skin }>
@@ -14,8 +16,20 @@ interface VirtualizedSkinGridProps {
   selectedSkins: SelectedSkin[]
   favorites: Set<string>
   loading: boolean
-  onSkinClick: (champion: Champion, skin: Skin, chromaId?: string) => void
+  onSkinClick: (champion: Champion, skin: Skin, chromaId?: string, variantId?: string) => void
   onToggleFavorite: (champion: Champion, skin: Skin) => void
+  onToggleChromaFavorite?: (
+    champion: Champion,
+    skin: Skin,
+    chromaId: string,
+    chromaName: string
+  ) => void
+  onToggleVariantFavorite?: (
+    champion: Champion,
+    skin: Skin,
+    variantId: string,
+    variantName: string
+  ) => void
   onDeleteCustomSkin?: (skinPath: string, skinName: string) => void
   onEditCustomSkin?: (skinPath: string, currentName: string) => void
   containerWidth: number
@@ -31,6 +45,8 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
   loading,
   onSkinClick,
   onToggleFavorite,
+  onToggleChromaFavorite,
+  onToggleVariantFavorite,
   onDeleteCustomSkin,
   onEditCustomSkin,
   containerWidth,
@@ -38,6 +54,11 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
 }) => {
   const gridRef = useRef<Grid>(null)
   const [chromaDialogState, setChromaDialogState] = useState<{
+    open: boolean
+    champion: Champion | null
+    skin: Skin | null
+  }>({ open: false, champion: null, skin: null })
+  const [variantDialogState, setVariantDialogState] = useState<{
     open: boolean
     champion: Champion | null
     skin: Skin | null
@@ -160,7 +181,7 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
       if (index >= skins.length) return null
 
       const { champion, skin } = skins[index]
-      const skinFileName = `${skin.lolSkinsName || skin.nameEn || skin.name}.zip`.replace(/:/g, '')
+      const skinFileName = generateSkinFilename(skin)
       const downloadedSkin = downloadedSkins.find((ds) => {
         if (champion.key === 'Custom') {
           // For custom mods, match by [User] prefix and skin name
@@ -174,10 +195,10 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
       })
       const isDownloaded = !!downloadedSkin
       const isUserSkin = downloadedSkin?.skinName?.includes('[User]')
-      const isFavorite = favorites.has(`${champion.key}_${skin.id}`)
+      const isFavorite = favorites.has(`${champion.key}_${skin.id}_base`)
       const isSelected = selectedSkins.some((s) => {
         // Direct match
-        if (s.championKey === champion.key && s.skinId === skin.id && !s.chromaId) {
+        if (s.championKey === champion.key && s.skinId === skin.id && !s.chromaId && !s.variantId) {
           return true
         }
 
@@ -188,7 +209,8 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
           isOldFormatCustomId(s.skinId) &&
           s.championKey === champion.key &&
           s.skinName === skin.name &&
-          !s.chromaId
+          !s.chromaId &&
+          !s.variantId
         ) {
           return true
         }
@@ -267,6 +289,32 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
                       size={24}
                       className=""
                     />
+                  </Button>
+                )}
+                {skin.variants && skin.variants.items.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-8 h-8 p-1 bg-surface hover:bg-secondary-100 dark:hover:bg-secondary-800 border border-border"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setVariantDialogState({ open: true, champion, skin })
+                    }}
+                    title={`${skin.variants.items.length} ${skin.variants.type} variants available`}
+                  >
+                    <svg
+                      className="w-5 h-5 text-primary-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+                      />
+                    </svg>
                   </Button>
                 )}
                 {/* Rarity gem for list view */}
@@ -451,9 +499,36 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
                   <ChromaColorPie colors={chromas.map((c) => c.colors[0])} size={28} className="" />
                 </div>
               )}
+              {/* Floating variant button for grid mode */}
+              {skin.variants && skin.variants.items.length > 0 && (
+                <div
+                  className="absolute bottom-2 left-[5.5rem] w-8 h-8 rounded-full bg-white dark:bg-charcoal-800 backdrop-blur-sm hover:bg-charcoal-50 dark:hover:bg-charcoal-700 transition-all cursor-pointer shadow-lg flex items-center justify-center ring-2 ring-white dark:ring-charcoal-700"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setVariantDialogState({ open: true, champion, skin })
+                  }}
+                  title={`${skin.variants.items.length} ${skin.variants.type} variants available`}
+                >
+                  <svg
+                    className="w-5 h-5 text-primary-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+                    />
+                  </svg>
+                </div>
+              )}
               {/* Rarity gem */}
               {skin.rarityGemPath && (
-                <div className="absolute bottom-2 left-[5.5rem] w-8 h-8">
+                <div
+                  className={`absolute bottom-2 ${chromas.length > 0 && skin.variants && skin.variants.items.length > 0 ? 'left-[9rem]' : chromas.length > 0 || (skin.variants && skin.variants.items.length > 0) ? 'left-[5.5rem]' : 'left-12'} w-8 h-8`}
+                >
                   <img
                     src={skin.rarityGemPath}
                     alt={skin.rarity}
@@ -571,7 +646,7 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
         {Cell}
       </Grid>
 
-      {chromaDialogState.champion && chromaDialogState.skin && (
+      {chromaDialogState.champion && chromaDialogState.skin && onToggleChromaFavorite && (
         <ChromaSelectionDialog
           open={chromaDialogState.open}
           onOpenChange={(open) => {
@@ -585,6 +660,28 @@ export const VirtualizedSkinGrid: React.FC<VirtualizedSkinGridProps> = ({
           selectedSkins={selectedSkins}
           downloadedSkins={downloadedSkins}
           onChromaSelect={onSkinClick}
+          favorites={favorites}
+          onToggleChromaFavorite={onToggleChromaFavorite}
+        />
+      )}
+
+      {variantDialogState.champion && variantDialogState.skin && (
+        <VariantSelectionDialog
+          open={variantDialogState.open}
+          onOpenChange={(open) => {
+            if (!open) {
+              setVariantDialogState({ open: false, champion: null, skin: null })
+            }
+          }}
+          champion={variantDialogState.champion}
+          skin={variantDialogState.skin}
+          selectedSkins={selectedSkins}
+          downloadedSkins={downloadedSkins}
+          onVariantSelect={(champion, skin, variantId) => {
+            onSkinClick(champion, skin, undefined, variantId)
+          }}
+          favorites={favorites}
+          onToggleVariantFavorite={onToggleVariantFavorite}
         />
       )}
     </>

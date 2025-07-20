@@ -20,7 +20,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-const THEME_STORAGE_KEY = 'chommicha-theme-config'
+const THEME_STORAGE_KEY = 'Chommicha-theme-config'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Load initial theme config from localStorage or use defaults

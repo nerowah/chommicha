@@ -89,12 +89,44 @@
     "downloading": "Descargando herramientas... {{progress}}%",
     "downloadTools": "Descargar herramientas"
   },
+  "downloadAll": {
+    "title": "Download All Skins",
+    "button": "Download All",
+    "optionsTitle": "Download All Skins",
+    "optionsDescription": "Choose which skins to download and configure download settings.",
+    "infoTitle": "Download Information",
+    "infoDescription": "Approximately {{count}} skins will be downloaded (~{{size}}).",
+    "filterOptions": "Filter Options",
+    "excludeChromas": "Exclude Chromas",
+    "excludeChromasDesc": "Skip chroma variants to reduce download size",
+    "excludeVariants": "Exclude Variants",
+    "excludeVariantsDesc": "Skip prestige editions and special variants",
+    "excludeLegacy": "Exclude Legacy Skins",
+    "excludeLegacyDesc": "Skip legacy and limited-time skins",
+    "excludeEsports": "Exclude Esports Skins",
+    "excludeEsportsDesc": "Skip championship and professional team skins",
+    "onlyFavorites": "Only Favorites",
+    "onlyFavoritesDesc": "Download only your favorited skins",
+    "performanceOptions": "Performance Options",
+    "concurrency": "Concurrent Downloads",
+    "concurrencyDesc": "Number of simultaneous downloads (higher = faster but more resource intensive)",
+    "startDownload": "Start Download",
+    "progress": "{{completed}} of {{total}} skins",
+    "speed": "Speed",
+    "timeRemaining": "Time remaining",
+    "failedDownloads": "{{count}} failed downloads",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "completed": "Download Complete"
+  },
   "settings": {
     "gamePath": "Ruta del juego",
     "language": "Idioma",
     "theme": "Tema",
     "notifications": "Notificaciones",
     "tabs": {
+      "general": "General",
       "leagueClient": "Cliente de League",
       "skinManagement": "Gestión de Aspectos"
     },
@@ -102,6 +134,18 @@
       "title": "Selección Aleatoria de Aspectos",
       "none": "Deshabilitado"
     },
+    "minimizeToTray": {
+      "title": "Minimizar a la bandeja",
+      "description": "Ocultar la aplicación en la bandeja del sistema en lugar de cerrarla al hacer clic en el botón de cerrar"
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "description": "Configura las preferencias de tu aplicación",
+    "gamePath": "Ruta del juego",
+    "language": "Idioma",
+    "theme": "Tema",
+    "notifications": "Notificaciones",
     "leagueClient": {
       "title": "Integración con el Cliente de League",
       "description": "Habilitar funciones que se conectan con el cliente de League of Legends"
@@ -158,6 +202,22 @@
       "title": "Skin favorito aleatorio automático",
       "description": "Seleccionar automáticamente un skin aleatorio de tus favoritos cuando se detecta un campeón"
     },
+    "autoRandomHighestWinRateSkin": {
+      "title": "Auto Skin Aleatorio con Mayor Tasa de Victoria",
+      "description": "Selecciona automáticamente un skin aleatorio de los 3 con mayor tasa de victoria"
+    },
+    "autoRandomHighestPickRateSkin": {
+      "title": "Auto Skin Aleatorio Más Popular",
+      "description": "Selecciona automáticamente un skin aleatorio de los 3 más populares"
+    },
+    "autoRandomMostPlayedSkin": {
+      "title": "Auto Skin Aleatorio Más Jugado",
+      "description": "Selecciona automáticamente un skin aleatorio de los 3 más jugados"
+    },
+    "inGameOverlay": {
+      "title": "Superposición en el juego",
+      "description": "Adjuntar superposición al cliente de League para notificaciones de skins más rápidas (requiere cualquier función de selección aleatoria automática)"
+    },
     "allowMultipleSkinsPerChampion": {
       "title": "Permitir múltiples skins por campeón",
       "description": "Habilitar para usar múltiples skins para el mismo campeón simultáneamente"
@@ -166,6 +226,13 @@
       "title": "Auto-arreglar problemas del mod al importar",
       "description": "Automáticamente arregla barras de vida faltantes, materiales faltantes y efectos VFX al importar mods"
     }
+  },
+  "tray": {
+    "show": "Mostrar Chommicha",
+    "hide": "Ocultar Chommicha",
+    "language": "Idioma",
+    "openSettings": "Abrir Configuración",
+    "quit": "Salir de Chommicha"
   },
   "errors": {
     "generic": "Ocurrió un error",
@@ -221,12 +288,16 @@
     "fixError": "Ocurrió un error al arreglar el mod",
     "saveChanges": "Guardar Cambios"
   },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
   "cancel": "Cancelar",
   "success": "Éxito",
   "error": "Error",
   "update": {
     "available": "Actualización disponible",
-    "description": "Hay una nueva versión de chommicha disponible para descargar.",
+    "description": "Hay una nueva versión de Chommicha disponible para descargar.",
     "whatsNew": "Novedades",
     "downloading": "Descargando...",
     "updateNow": "Actualizar ahora",
@@ -254,6 +325,10 @@
     "selectChroma": "Seleccionar croma para {{skinName}}",
     "chooseChroma_one": "Elegí entre {{count}} croma disponible",
     "chooseChroma_other": "Elegí entre {{count}} cromas disponibles",
+    "selectVariant": "Seleccionar variante para {{skinName}}",
+    "chooseVariant": "Elegí entre {{count}} {{type}} disponibles",
+    "exaltedVariant": "Variantes exaltadas",
+    "formVariant": "Variantes de forma",
     "mySkins": "Mis skins",
     "roomSkins": "Skins de la sala",
     "manage": "Administrar",
@@ -279,6 +354,14 @@
     "skinNumAsc": "N° de skin (menor a mayor)",
     "skinNumDesc": "N° de skin (mayor a menor)",
     "championName": "Nombre del campeón",
+    "rarityAsc": "Rareza (Baja a Alta)",
+    "rarityDesc": "Rareza (Alta a Baja)",
+    "winRateDesc": "Tasa de victoria (Alta a Baja)",
+    "winRateAsc": "Tasa de victoria (Baja a Alta)",
+    "pickRateDesc": "Tasa de selección (Alta a Baja)",
+    "pickRateAsc": "Tasa de selección (Baja a Alta)",
+    "totalGamesDesc": "Más jugado",
+    "totalGamesAsc": "Menos jugado",
     "rarity": "Rareza",
     "rarities": {
       "epic": "Épica",

@@ -10,18 +10,24 @@ import {
   isChampionLockedAtom,
   autoViewSkinsEnabledAtom,
   autoRandomRaritySkinEnabledAtom,
-  autoRandomFavoriteSkinEnabledAtom
+  autoRandomFavoriteSkinEnabledAtom,
+  autoRandomHighestWinRateSkinEnabledAtom,
+  autoRandomHighestPickRateSkinEnabledAtom,
+  autoRandomMostPlayedSkinEnabledAtom,
+  currentQueueIdAtom
 } from '../store/atoms/lcu.atoms'
 import {
   leagueClientEnabledAtom,
   championDetectionEnabledAtom
 } from '../store/atoms/settings.atoms'
+import { PRESELECT_CHAMPION_QUEUE_IDS } from '../constants/queues'
 import type { Champion } from '../App'
 
 interface ChampionSelectData {
   championId: number
   isLocked: boolean
   isHover: boolean
+  queueId?: number | null
 }
 
 interface UseChampionSelectHandlerProps {
@@ -47,9 +53,13 @@ export function useChampionSelectHandler({
   const [autoViewSkinsEnabled] = useAtom(autoViewSkinsEnabledAtom)
   const [autoRandomRaritySkinEnabled] = useAtom(autoRandomRaritySkinEnabledAtom)
   const [autoRandomFavoriteSkinEnabled] = useAtom(autoRandomFavoriteSkinEnabledAtom)
+  const [autoRandomHighestWinRateSkinEnabled] = useAtom(autoRandomHighestWinRateSkinEnabledAtom)
+  const [autoRandomHighestPickRateSkinEnabled] = useAtom(autoRandomHighestPickRateSkinEnabledAtom)
+  const [autoRandomMostPlayedSkinEnabled] = useAtom(autoRandomMostPlayedSkinEnabledAtom)
   const [leagueClientEnabled] = useAtom(leagueClientEnabledAtom)
   const [championDetectionEnabled] = useAtom(championDetectionEnabledAtom)
   const setSelectedChampionKey = useSetAtom(selectedChampionKeyAtom)
+  const setCurrentQueueId = useSetAtom(currentQueueIdAtom)
 
   const lastSelectedChampionIdRef = useRef<number | null>(null)
   const gameflowPhaseRef = useRef<string>('None')
@@ -96,12 +106,25 @@ export function useChampionSelectHandler({
         setLcuSelectedChampion(null)
         setIsChampionLocked(false)
       }
+
+      // Clear queue ID when entering a new champion select from lobby or none
+      // This ensures we don't carry over queue ID from previous games
+      // But we keep it when coming from Matchmaking/ReadyCheck as that's the same game flow
+      if (data.phase === 'ChampSelect' && ['Lobby', 'None'].includes(data.previousPhase)) {
+        setCurrentQueueId(null)
+      }
+    })
+
+    const unsubscribeQueueIdDetected = window.api.onLcuQueueIdDetected((data) => {
+      // Set queue ID immediately when lobby is created (much earlier than champion select)
+      setCurrentQueueId(data.queueId)
     })
 
     return () => {
       unsubscribeConnected()
       unsubscribeDisconnected()
       unsubscribePhaseChanged()
+      unsubscribeQueueIdDetected()
     }
   }, [
     enabled,
@@ -111,7 +134,8 @@ export function useChampionSelectHandler({
     setLcuConnected,
     setIsInChampSelect,
     setLcuSelectedChampion,
-    setIsChampionLocked
+    setIsChampionLocked,
+    setCurrentQueueId
   ])
 
   const handleChampionSelection = useCallback(
@@ -148,8 +172,32 @@ export function useChampionSelectHandler({
       setLcuSelectedChampion(champion)
       setIsChampionLocked(data.isLocked)
 
+      // Update current queue ID if available
+      if (data.queueId !== undefined && data.queueId !== null) {
+        setCurrentQueueId(data.queueId)
+      }
+
+      // Skip auto random skin for modes with preselected champions (no champion select phase)
+      const isPreselectChampionMode =
+        data.queueId !== undefined &&
+        data.queueId !== null &&
+        PRESELECT_CHAMPION_QUEUE_IDS.includes(data.queueId)
+      if (isPreselectChampionMode) {
+        console.log(
+          `[ChampionSelectHandler] Skipping auto-random skin for queue ${data.queueId} (preselect champion mode)`
+        )
+        return
+      }
+
       // Handle auto random skin selection
-      if (onAutoSelectSkin && (autoRandomRaritySkinEnabled || autoRandomFavoriteSkinEnabled)) {
+      if (
+        onAutoSelectSkin &&
+        (autoRandomRaritySkinEnabled ||
+          autoRandomFavoriteSkinEnabled ||
+          autoRandomHighestWinRateSkinEnabled ||
+          autoRandomHighestPickRateSkinEnabled ||
+          autoRandomMostPlayedSkinEnabled)
+      ) {
         onAutoSelectSkin(champion)
       }
     },
@@ -160,9 +208,13 @@ export function useChampionSelectHandler({
       championDetectionEnabled,
       autoRandomRaritySkinEnabled,
       autoRandomFavoriteSkinEnabled,
+      autoRandomHighestWinRateSkinEnabled,
+      autoRandomHighestPickRateSkinEnabled,
+      autoRandomMostPlayedSkinEnabled,
       onAutoSelectSkin,
       setLcuSelectedChampion,
-      setIsChampionLocked
+      setIsChampionLocked,
+      setCurrentQueueId
     ]
   )
 
