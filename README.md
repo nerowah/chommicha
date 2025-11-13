@@ -95,37 +95,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [cslol-manager](https://github.com/LeagueToolkit/cslol-manager/) - Core modding tools
-- [lol-skins](https://github.com/darkseal-org/lol-skins) - A comprehensive collection of League of Legends skins available for custom use.
-
-## ⚠️ Disclaimer
-
-This project is not affiliated with Riot Games. League of Legends and Riot Games are registered trademarks of Riot Games, Inc.
-
-Use at your own risk. Skins are client-side only and do not provide any competitive advantage.
-
-## 📧 Contact
-
-- GitHub Issues: [Create an issue](https://github.com/hoangvu12/chommicha/issues)
-- Discord Server: [Join our community](https://discord.gg/frXDBTe4FW)
-- GitHub Repository: [Star on GitHub](https://github.com/hoangvu12/chommicha)
-
-## 💝 Support
-
-If you find chommicha helpful and want to support its development:
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/hoangvu12)
-
-Your support helps keep the project alive and motivates continued development!
-
----
-
-<div align="center">
-  Made with ❤️ by <a href="https://github.com/hoangvu12">hoangvu12</a>
-</div>
